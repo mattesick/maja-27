@@ -320,6 +320,16 @@ button{font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent}
 #confetti{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:50}
 .toast{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom)); transform:translate(-50%, 140%); background:var(--gold); color:var(--ink); padding:12px 18px; border-radius:99px; font-weight:700; box-shadow:0 10px 30px #0008; z-index:60; transition:transform .5s cubic-bezier(.3,1.5,.5,1), opacity .3s, visibility 0s .5s; border:0; font-size:15px; white-space:nowrap; opacity:0; visibility:hidden; pointer-events:none}
 .toast.show{transform:translate(-50%, 0); opacity:1; visibility:visible; pointer-events:auto; transition:transform .5s cubic-bezier(.3,1.5,.5,1), opacity .3s}
+/* Testläge */
+.testbar{position:fixed; left:8px; right:8px; bottom:calc(8px + env(safe-area-inset-bottom)); z-index:65; background:#0d0610e6; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); color:#fff; border:1px solid #f0b43c55; border-radius:16px; padding:8px; font-family:var(--mono); font-size:12px; box-shadow:0 10px 30px #000a}
+.testbar .row{display:flex; gap:6px}
+.testbar .clock{display:flex; justify-content:space-between; align-items:center; padding:2px 4px 8px; color:var(--gold)}
+.testbar .clock b{font-size:16px; letter-spacing:.04em}
+.testbar button{flex:1; border:0; border-radius:10px; padding:11px 4px; background:#ffffff1f; color:#fff; font-family:var(--mono); font-size:12px; min-height:42px}
+.testbar button:active{background:#ffffff40}
+.testbar button.hl{background:var(--gold); color:var(--ink); font-weight:500}
+body.testing main{padding-bottom:150px}
+body.testing .toast{bottom:calc(120px + env(safe-area-inset-bottom))}
 footer{text-align:center; color:#fff6; font-size:12px; margin-top:30px; font-family:var(--mono)}
 
 @media (prefers-reduced-motion: reduce){
@@ -412,10 +422,13 @@ let offset = 0;
   const target = Date.UTC(+y, +mo - 1, +d, +hh - CONFIG.utcOffset, +mm, +(ss || 0));
   offset = target - Date.now();
 })();
+const TEST = params.has('test');
+if (TEST && !params.get('tid')) offset = unlockAt(8) - 8000 - Date.now(); // börja 07:59:52
 const now = () => Date.now() + offset;
 
 /* ================= Lagring ================= */
-const KEY = 'maja27-v1';
+const KEY = TEST ? 'maja27-test' : 'maja27-v1';
+if (TEST && params.has('nollstall')) localStorage.removeItem(KEY);
 if (params.has('nollstall')) localStorage.removeItem(KEY);
 let store;
 try { store = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { store = {}; }
@@ -942,6 +955,35 @@ function tick() {
 }
 tick();
 setInterval(tick, 1000);
+
+/* ---- testläge (?test) ---- */
+if (TEST) {
+  document.body.classList.add('testing');
+  const bar = document.createElement('div');
+  bar.className = 'testbar';
+  bar.innerHTML = `<div class="clock"><span>🧪 TESTLÄGE · simulerad tid</span><b id="t-clock">--:--:--</b></div>
+    <div class="row"><button type="button" data-a="back">⏪ −1 h</button><button type="button" data-a="fwd">⏩ +1 h</button><button type="button" class="hl" data-a="next">⏭ Nästa lucka</button><button type="button" data-a="reset">↺ Börja om</button></div>`;
+  document.body.appendChild(bar);
+  const clock = $('#t-clock');
+  const fmtClock = () => {
+    const d = new Date(now() + CONFIG.utcOffset * 3600000);
+    const day = ['sön', 'mån', 'tis', 'ons', 'tor', 'fre', 'lör'][d.getUTCDay()];
+    clock.textContent = `${day} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+  };
+  fmtClock(); setInterval(fmtClock, 250);
+  bar.addEventListener('click', e => {
+    const a = e.target.closest('button')?.dataset.a; if (!a) return;
+    if (a === 'reset') { localStorage.removeItem(KEY); location.href = location.pathname + '?test'; return; }
+    $('#toast').classList.remove('show');
+    if (a === 'back') offset -= 3600000;
+    if (a === 'fwd') offset += 3600000;
+    if (a === 'next') {
+      const nx = LUCKOR.find(l => now() < unlockAt(l.h));
+      offset = nx ? unlockAt(nx.h) - 4000 - Date.now() : unlockAt(8) - 8000 - Date.now();
+    }
+    vibrate(8); tick(); fmtClock();
+  });
+}
 document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
 })();
 </script>
