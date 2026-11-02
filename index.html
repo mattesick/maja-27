@@ -11,21 +11,22 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=DM+Sans:opsz,wght@9..40,400..700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400..700&family=Shantell+Sans:ital,wght@0,400..700;1,400..700&family=Caveat:wght@600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
   --night:#24122b; --plum:#3b1d45; --plum2:#552a5f;
   --paper:#f8f0e3; --paper2:#efe2cc; --ink:#24181f; --muted:#7a6670;
   --wine:#8c1d40; --gold:#f0b43c; --rose:#ff8fa3; --sage:#5f8466;
   --radius:18px;
-  --display:'Fraunces', Georgia, serif;
-  --body:'DM Sans', system-ui, -apple-system, sans-serif;
+  --display:'Fredoka', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --body:'Shantell Sans', 'Comic Sans MS', system-ui, sans-serif;
+  --hand:'Caveat', 'Bradley Hand', cursive;
   --mono:'DM Mono', ui-monospace, Menlo, monospace;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{
-  margin:0; min-height:100vh; color:var(--ink); font-family:var(--body); font-size:17px; line-height:1.55;
+  margin:0; min-height:100vh; color:var(--ink); font-family:var(--body); font-size:16px; line-height:1.6;
   background:
     radial-gradient(1200px 600px at 110% -10%, #7a2d5a55, transparent 60%),
     radial-gradient(900px 500px at -20% 20%, #f0b43c22, transparent 60%),
@@ -66,8 +67,9 @@ button{font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent}
 .ticket .top .num{background:var(--wine); color:var(--paper); padding:3px 8px; border-radius:6px}
 .done-stamp{position:absolute; right:26px; bottom:38px; z-index:2; color:var(--sage); border:3px solid var(--sage); border-radius:8px; padding:3px 10px; font-family:var(--mono); font-weight:500; font-size:15px; letter-spacing:.1em; transform:rotate(-12deg); background:#f8f0e3dd; animation:stamp .5s cubic-bezier(.3,1.6,.5,1) both}
 .done-stamp[hidden]{display:none}
-.ticket h1{font-size:clamp(40px, 12vw, 58px); font-weight:800; margin:14px 0 2px; letter-spacing:-.02em}
-.ticket h1 em{font-style:italic; font-weight:500; color:var(--wine)}
+.ticket h1{font-size:clamp(40px, 12vw, 58px); font-weight:700; margin:14px 0 2px; letter-spacing:-.02em}
+.ticket h1 em{font-style:normal; color:var(--wine); display:inline-block; transform:rotate(-4deg); animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{50%{transform:rotate(3deg) translateY(-3px)}}
 .ticket .sub{color:var(--muted); margin:0 0 14px; font-size:15px}
 .perf{border-top:2px dashed #cdbba3; margin:16px -22px 14px}
 .fields{display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted)}
@@ -164,7 +166,7 @@ button{font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent}
 .card.open .content{grid-template-rows:1fr}
 .inner{padding:2px 20px 22px}
 .inner h2{font-size:28px; font-weight:800; letter-spacing:-.01em; margin:4px 0 6px}
-.lead{font-family:var(--display); font-style:italic; font-size:22px; color:var(--wine); margin:.4em 0}
+.lead{font-family:var(--hand); font-size:30px; line-height:1.1; color:var(--wine); margin:.4em 0}
 .aside{font-size:14px; color:var(--muted); border-left:3px solid var(--gold); padding:2px 0 2px 12px}
 .card.open .inner > *{animation:rise .6s both}
 .card.open .inner > *:nth-child(2){animation-delay:.08s}.card.open .inner > *:nth-child(3){animation-delay:.16s}
@@ -183,7 +185,7 @@ button{font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent}
 .clue .pts b{font-family:var(--display); font-size:26px; font-weight:900}
 .clue .pts span{font-family:var(--mono); font-size:9px; text-transform:uppercase; letter-spacing:.08em}
 .clue .lbl{font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--gold)}
-.clue p{margin:.2em 0 0; font-family:var(--display); font-size:17px; font-style:italic}
+.clue p{margin:.2em 0 0; font-family:var(--hand); font-size:23px; line-height:1.15}
 
 /* Journal */
 .journal{font-family:var(--mono); font-size:13px; background:#fff; border:1px solid #d8cbb6; border-radius:10px; padding:14px; margin:14px 0; position:relative; line-height:1.6}
@@ -223,7 +225,7 @@ button{font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent}
 
 /* Receptsnurra */
 .spinner{background:var(--ink); color:var(--paper); border-radius:16px; padding:16px; margin:14px 0; text-align:center}
-.spinner .window{height:76px; display:grid; place-content:center; background:#ffffff10; border-radius:12px; padding:8px 14px; font-family:var(--display); font-size:18px; font-style:italic; line-height:1.25; overflow:hidden}
+.spinner .window{height:76px; display:grid; place-content:center; background:#ffffff10; border-radius:12px; padding:8px 14px; font-family:var(--hand); font-size:24px; line-height:1.1; overflow:hidden}
 .spinner .window.rolling span{filter:blur(1px)}
 .spinner .window.done span{animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
 @keyframes pop{from{transform:scale(.7)}}
@@ -272,7 +274,7 @@ button{font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent}
 .reveal .lbl{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold)}
 .reveal h3{font-size:30px; margin:8px 0 4px}
 .reveal p{margin:.3em 0; opacity:.9}
-.cincin{font-family:var(--display); font-style:italic; font-weight:900; font-size:clamp(38px,12vw,56px); white-space:nowrap; color:var(--gold); margin:10px 0 0; display:flex; justify-content:center; align-items:center; gap:10px}
+.cincin{font-family:var(--display); font-weight:700; font-size:clamp(38px,12vw,56px); white-space:nowrap; color:var(--gold); margin:10px 0 0; display:flex; justify-content:center; align-items:center; gap:10px}
 .glass{display:inline-block; font-style:normal; font-size:clamp(28px,9vw,40px)}
 .glass.l{animation:clinkL 1.8s ease-in-out infinite}
 .glass.r{animation:clinkR 1.8s ease-in-out infinite}
@@ -292,7 +294,27 @@ button{font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent}
 .coat-quip b{font-family:var(--display)}
 .fineprint{font-size:12px; color:var(--muted)}
 .signoff{text-align:center; font-family:var(--display); font-size:21px; margin:20px 0 4px; line-height:1.4}
-.signoff em{color:var(--wine)}
+.signoff em{color:var(--wine); font-family:var(--hand); font-style:normal; font-size:34px; display:inline-block; animation:bob 2.6s ease-in-out infinite}
+
+/* Polaroider */
+.pola{background:#fff; padding:10px 10px 12px; margin:20px auto; width:min(84%,340px); box-shadow:0 12px 26px -12px #0007, 0 1px 3px #0002; transform:rotate(var(--r,0deg)); position:relative; cursor:zoom-in; transition:transform .3s; -webkit-tap-highlight-color:transparent}
+.pola:active{transform:rotate(0deg) scale(.97)}
+.pola::before{content:""; position:absolute; top:-11px; left:50%; width:86px; height:24px; margin-left:-43px; background:#f0b43caa; transform:rotate(calc(var(--r,0deg) * -1.6)); box-shadow:0 1px 2px #0001}
+.pola img{display:block; width:100%; aspect-ratio:4/5; object-fit:cover; object-position:var(--pos, center); background:#e9dfcf}
+.pola.wide img{aspect-ratio:4/3}
+.pola figcaption{font-family:var(--hand); font-size:22px; font-weight:600; line-height:1.1; text-align:center; margin-top:8px; color:var(--ink)}
+.polas{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:22px 0}
+.polas .pola{width:auto; margin:0}
+.polas .pola figcaption{font-size:19px}
+.card.open:not(.seen) .pola img{animation:develop 2.4s ease-out both}
+@keyframes develop{from{filter:brightness(2.2) sepia(.7) contrast(.5) blur(4px)}}
+.lightbox{position:fixed; inset:0; z-index:70; background:#1a0d1ff2; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; gap:10px; animation:fade .25s both; cursor:zoom-out}
+.lightbox[hidden]{display:none}
+.lightbox img{max-width:92vw; max-height:76vh; border:8px solid #fff; border-bottom-width:12px; border-radius:3px; transform:rotate(-1.5deg); animation:zoomin .4s cubic-bezier(.3,1.4,.5,1) both; box-shadow:0 20px 50px #000a}
+.lightbox p{color:#fff; font-family:var(--hand); font-size:26px; text-align:center; max-width:90vw; margin:6px 0 0; line-height:1.15}
+.lightbox small{color:#fff8; font-size:12px; font-family:var(--mono)}
+@keyframes fade{from{opacity:0}}
+@keyframes zoomin{from{transform:scale(.6) rotate(-8deg); opacity:0}}
 
 /* Toast & konfetti */
 #confetti{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:50}
@@ -359,6 +381,7 @@ footer{text-align:center; color:#fff6; font-size:12px; margin-top:30px; font-fam
   <footer>Maja-expressen · ingen förseningsersättning utbetalas</footer>
 </main>
 <button class="toast" id="toast" type="button"></button>
+<div class="lightbox" id="lightbox" hidden role="dialog" aria-label="Bild"><img alt=""><p></p><small>tryck för att stänga</small></div>
 
 <script>
 (() => {
@@ -425,6 +448,10 @@ function song(artist, title, note = '', big = false) {
   </div>`;
 }
 
+const pola = (src, cap, r = -2, opt = {}) =>
+  `<figure class="pola${opt.wide ? ' wide' : ''}" style="--r:${r}deg${opt.pos ? ';--pos:' + opt.pos : ''}"><img src="img/${src}.jpg" alt="${esc(cap)}" loading="lazy" decoding="async"><figcaption>${esc(cap)}</figcaption></figure>`;
+const polas = (...p) => `<div class="polas">${p.join('')}</div>`;
+
 /* ================= Luckorna ================= */
 const LUCKOR = [
 {
@@ -433,6 +460,7 @@ const LUCKOR = [
   html: () => `
     <h2>Godmorgon, födelsedagsbarn! 🎂</h2>
     <p class="lead">Grattis på 27-årsdagen, Maja!</p>
+    ${polas(pola('tunga', 'Du, 07:59', -3), pola('skratt', 'Du, 08:01. Efter den här sidan.', 2.5))}
     <p>Välkommen ombord på Maja-expressen. Idag rullar ett tåg genom hela din dag, och varje hel timme öppnas en ny lucka. Slutstationen nås klockan 17:00.</p>
     <p>Inga förseningar, inget signalfel i Nässjö och ingen som ropar ut att bistron är stängd. Bara du, mobilen och en dag som blir bättre för varje timme.</p>
     <div class="rules"><h3>Så funkar det</h3><ol>
@@ -448,6 +476,7 @@ const LUCKOR = [
   html: () => `
     <h2>Det är faktiskt hjärnkirurgi 🧠</h2>
     <p>Du jobbar med folks hjärnor. Jag behövde tre försök för att få på påslakanet i morse. Vi verkar på olika nivåer, och det är helt okej.</p>
+    ${pola('muskler', 'Du, efter ett pass med patientlyft. Bilden är inte redigerad. (Jo.)', -2, { pos: 'center 30%' })}
     <p>Idag är det dock omvända roller. Här är din journal:</p>
     <div class="journal">
       <div class="h">JOURNALANTECKNING · Avd. Födelsedag</div>
@@ -468,6 +497,7 @@ const LUCKOR = [
   html: () => `
     <h2>Dagens soundtrack 🎧</h2>
     <p>Zara Larsson vann Talang som tioåring, med en Céline Dion-låt. Du började nysa i ett stall som nioåring. Ni har båda kommit långt sedan dess.</p>
+    ${pola('albumomslag', 'Omslaget till ditt debutalbum. Zara, ring oss.', 2)}
     <p>Här är förmiddagens playlist. Hörlurar på, volym upp. Om någon undrar varför du ler hela tiden är svaret ”födelsedag”.</p>
     <div class="songs">
       ${song('Zara Larsson', 'Lush Life', 'obligatorisk')}
@@ -484,6 +514,7 @@ const LUCKOR = [
     <h2>Hälsningar från gården 🌾</h2>
     <p>Du flyttade till en stor gård på Skäftesfall när du var nio. På gården fanns hästar. Du är allergisk mot hästar.</p>
     <p>Det är ungefär som att vara laktosintolerant och växa upp i en ostbutik. Och ändå blev du den tåligaste människan jag känner. Mot allt utom hästar.</p>
+    ${pola('stugan', 'Landet. Alla hästar bortretuscherade.', -2, { pos: 'center 40%' })}
     <div class="nohorse"><div class="sign">🐴</div><div><b>Officiellt besked</b><span>Dagens program är 100 % hästfritt. Vi har dubbelkollat. Inte ens en dalahäst.</span></div></div>
     <p class="aside">Antihistaminet får ta ledigt idag. Det har jobbat nog.</p>`
 },
@@ -494,6 +525,7 @@ const LUCKOR = [
     <h2>Sparat: oändligt. Lagat: sex.</h2>
     <p>Enligt mina beräkningar har du sparat ungefär alla recept som finns på Instagram. I nuvarande takt har vi lagat dem år 2089.</p>
     <p>Så nu får slumpen bestämma. Snurra, så lagar vi det som hamnar närmast bland dina sparade.</p>
+    ${pola('fia', 'Samma fokus som när du väljer bland 4 000 sparade recept. (Det här är fia.)', 2, { pos: 'center 20%' })}
     <div class="spinner">
       <div class="window" id="spin-window"><span>Tryck på knappen 👇</span></div>
       <button class="btn" id="spin-btn" type="button">🎰 Snurra</button>
@@ -540,6 +572,7 @@ const LUCKOR = [
     <p>Bocka av allt eftersom det händer. Tre i rad ger bingo.</p>
     <div class="bingo" id="bingo"></div>
     <div class="bingo-msg" id="bingo-msg"></div>
+    ${pola('stopp', 'Du, när någon börjar en mening med ”jag säger bara…”', -2)}
     <p class="aside">Och kom ihåg: hon är trots allt anledningen till att du finns. Det är en ganska stark merit. (Säg inte till henne att jag sa det.)</p>`,
   init: el => {
     const cells = [
@@ -587,6 +620,7 @@ const LUCKOR = [
         ['Tålamod med mamma', 'varierar per sms', 50, 'wobble'],
       ].map(([k, v, w, c]) => `<div class="stat"><div class="row"><span>${k}</span><em>${v}</em></div><div class="bar ${c || ''}"><i data-w="${w}"></i></div></div>`).join('')}
     </div>
+    ${polas(pola('klippan', 'Fotografen bad dig titta in i kameran.', -3, { pos: 'center 45%' }), pola('yatzy', 'Yatzy-resultatet kommenteras inte.', 3))}
     <p>Att hitta dig i en folkmassa tar mig ungefär två sekunder. Det är min favoritsak med att gå på konsert med dig.</p>
     <p class="aside">Och ja, du är orimligt snygg. Det är inget skämt, bara ett konstaterande.</p>`,
   init: el => {
@@ -601,6 +635,7 @@ const LUCKOR = [
   html: () => `
     <h2>Egentid och fika ☕</h2>
     <p>Du gillar fika. Du gillar att få vara ifred. Här är två officiella kuponger som täcker båda. Tryck för att stämpla.</p>
+    ${pola('skargard', 'Egentid, dokumenterad på behörigt avstånd.', -1.5, { wide: true, pos: '35% center' })}
     <button type="button" class="coupon" data-c="0"><span class="ic">🤫</span><b>En timme helt ifred</b><span>Ingen pratar med dig. Inte jag, inte Maria, inte någon gruppchatt. Giltig när som helst, ingen förvarning krävs.</span><span class="tap">Tryck för att stämpla</span><span class="stamp">GILTIG ✓</span></button>
     <button type="button" class="coupon" data-c="1"><span class="ic">🍰</span><b>Fika, jag bjuder</b><span>Valfritt café. Du väljer bakelse. Två bakelser är också okej, ingen dömer.</span><span class="tap">Tryck för att stämpla</span><span class="stamp">GILTIG ✓</span></button>
     <p class="aside">Det här är dagens enda lucka där mobilen gärna får läggas ifrån sig. Vi ses 16:00.</p>`,
@@ -628,6 +663,7 @@ const LUCKOR = [
       ${song('Beyoncé', 'Run the World (Girls)')}
       ${song('Beyoncé', 'Halo')}
     </div>
+    ${pola('konsert', 'Konsert: perfekt plats, ingen skarp bild. Som vanligt.', 2)}
     <p>Du älskar konserter. Ikväll är det du som är huvudnumret. Publiken är liten (jag), men extremt entusiastisk.</p>`
 },
 {
@@ -647,6 +683,7 @@ const LUCKOR = [
       <p>På allt. Förrätt, varmrätt, efterrätt och vinet. Du behöver inte ens kika på priserna.</p>
       <div class="cincin"><span class="glass l">🥂</span>Cin cin!<span class="glass r">🥂</span></div>
     </div>
+    ${pola('restaurang', 'Senast vi var ute. Ikväll blir det repris.', -2, { pos: 'center 30%' })}
     <div class="result">${result}</div>
     <div class="coat-box">
       <h3>En sak till…</h3>
@@ -667,9 +704,11 @@ const LUCKOR = [
       </svg>
       <div class="swatches" id="swatches"></div>
       <p class="coat-quip" id="coat-quip">Tryck på en färg för att prova.</p>
+      ${polas(pola('jackan', 'Du i en jacka. Jag i spegeln, väldigt nöjd.', -3), pola('provrum', 'Provrumsteamet är redo igen.', 3, { pos: '18% center' }))}
       <p class="fineprint">Kappan ovan är bara en skiss. Den riktiga väljer du själv, i vilken butik som helst. Skicka en länk så är det klart.</p>
     </div>
     ${song('Céline Dion', "I'm Alive", 'dagens slutlåt, spelas på full volym', true)}
+    ${pola('bilen', 'Resesällskap. Samma tid nästa år?', -2, { pos: 'center 40%' })}
     <p class="signoff">Grattis på 27-årsdagen, Maja.<br>Tack för att du åkte med hela vägen.<br><em>Jag älskar dig.</em><br>/ ${esc(CONFIG.signature)}</p>`;
   },
   init: el => {
@@ -847,6 +886,18 @@ function renderBrake() {
     });
   });
 }
+
+/* ---- lightbox ---- */
+(() => {
+  const lb = $('#lightbox'), img = $('img', lb), cap = $('p', lb);
+  document.addEventListener('click', e => {
+    const f = e.target.closest('.pola'); if (!f) return;
+    const i = $('img', f); img.src = i.src; img.alt = i.alt; cap.textContent = $('figcaption', f).textContent;
+    lb.hidden = false; vibrate(8);
+  });
+  lb.addEventListener('click', () => { lb.hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') lb.hidden = true; });
+})();
 
 /* ---- toast ---- */
 let toastTimer;
