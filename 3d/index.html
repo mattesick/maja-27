@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#24122b">
+<title>Maja-expressen 🎂</title>
+<meta property="og:title" content="Maja-expressen 🎂">
+<meta property="og:description" content="Ett tåg, nitton stopp och en hel födelsedag. Avgång 08:00.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎂</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400..700&family=Shantell+Sans:ital,wght@0,400..700;1,400..700&family=Caveat:wght@600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./ui.css">
+<script type="importmap">{"imports":{"three":"../vendor/three.module.min.js","three/addons/":"../vendor/addons/"}}</script>
+</head>
+<body>
+<canvas id="scene" aria-label="Maja-expressen, ett litet tåg genom din födelsedag"></canvas>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<header class="hud" aria-label="Biljett">
+  <div class="mini-ticket"><div class="ticket-brand"><span>MAJA-EXPRESSEN</span><span class="train-number">TÅG 27</span></div><div class="ticket-line"><h1>Grattis, <em>Maja!</em></h1><span id="progress">Stopp 0/19</span></div><div class="ticket-status"><span class="status-dot"></span><span id="status-label">Tåget avgår 08:00</span><b id="status-cd">--:--:--</b></div></div>
+  <div class="hud-actions"><button id="plan-button" class="plan-button" aria-controls="plan" aria-expanded="false"><span aria-hidden="true">☷</span> Resplan</button><button id="brake-shortcut" type="button" aria-label="Nödbroms" hidden>🛑</button></div>
+</header>
+<div class="scene-caption" id="scene-caption"><span id="scene-eyebrow">TISDAG 3 NOVEMBER · FÖRSTA KLASS</span><h2 id="scene-title">Slutstation: hemlig.</h2><p id="scene-note">En resa genom hela din födelsedag.<br>Ett nytt stopp varje halvtimme.</p></div>
+<div class="announcement" id="announcement" role="status" tabindex="0" aria-label="Konduktörens utrop. Tryck för att stänga." aria-live="polite" hidden><span class="conductor-icon" aria-hidden="true">🚂</span><div><span class="eyebrow">KONDUKTÖREN</span><p id="announcement-text"></p></div></div>
+<div class="travel-caption" id="travel-caption" role="status" hidden><span>🚂</span><b id="travel-title">Mot nästa station…</b><small id="travel-sub">Fönsterplats, såklart.</small></div>
+<section class="story-sheet" id="sheet" aria-label="Luckans innehåll" hidden>
+  <button id="sheet-toggle" class="sheet-toggle" aria-expanded="true" aria-controls="sheet-scroll"><span class="handle"></span><span class="sheet-hint" id="sheet-hint"></span><span id="sheet-label">Korsberga · 08:00</span><span id="sheet-chevron" aria-hidden="true">⌄</span></button>
+  <div class="sheet-scroll" id="sheet-scroll" tabindex="0"><div id="sheet-content"></div></div>
+</section>
+<div class="departure-dock"><button id="depart" class="depart" disabled>🎂 Starta resan</button><p id="departure-note">Tåget avgår 08:00</p></div>
+<button class="toast" id="toast" type="button" role="status" aria-live="polite"></button>
+<div class="drawer-backdrop" id="plan-backdrop" hidden></div>
+<aside class="plan-drawer" id="plan" role="dialog" aria-modal="true" aria-labelledby="plan-title" hidden>
+  <div class="drawer-heading"><div><span class="eyebrow">DIN FÖDELSEDAGSBILJETT</span><h2 id="plan-title">Resplan</h2></div><button class="round-button" id="plan-close" aria-label="Stäng resplan">×</button></div>
+  <section class="trip-ticket"><div class="trip-complete" id="done-stamp" hidden>GENOMFÖRD ✓</div><div class="fields"><div>Resenär<b>Maja Strandh</b></div><div>Klass<b>Första, såklart</b></div><div>Avgång<b>Korsberga 08:00</b></div><div>Ankomst<b>??? 17:00</b></div><div>Datum<b>Tis 3 nov 2026</b></div><div>Plats<b>Fönster</b></div></div></section>
+  <p class="plan-help">Tryck på ett stopp du har besökt för att åka tillbaka och kika igen.</p>
+  <div class="discovery-counters"><p id="mattias-count">Mattias hittad: 0/19</p><p id="egg-count">Påskägg: 0/16</p></div><p class="hunt-help">Mattias gömmer sig vid varje stopp. Tryck på honom när du ser honom. Han blir sämre på det ju längre dagen går.</p><div id="plan-stations"></div>
+  <footer>Maja-expressen · ingen förseningsersättning utbetalas</footer>
+  <a class="classic-link" href="../klassisk/">Visa den klassiska resan ↗</a>
+</aside>
+<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Bild"><button class="round-button" aria-label="Stäng bild">×</button><img alt=""><p></p><small>tryck för att stänga</small></div>
+<div class="loading" id="loading" role="status"><div class="loading-art">🚂<span>✦</span></div><span class="eyebrow">FÖRSTA KLASS · HELA DAGEN</span><h2>Maja-expressen<br>värmer upp…</h2><p>Lägger ut rälsen, blåser upp ballonger.</p><div class="loading-track"><i></i></div></div>
+<div class="fallback" id="fallback" hidden><div>🎂</div><h1>Signalfel i Nässjö.</h1><p>Tåget kom inte riktigt iväg den här gången. Ingen fara – samma resa finns i klassisk version.</p><a class="btn" href="../klassisk/">Åk klassiskt →</a></div>
+<noscript><div class="fallback"><h1>Signalfel i Nässjö.</h1><p>Tåget kom inte riktigt iväg den här gången. Ingen fara – samma resa finns i klassisk version.</p><a class="btn" href="../klassisk/">Åk klassiskt →</a></div></noscript>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

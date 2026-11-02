@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>dev · world.js</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400..700&family=Shantell+Sans:wght@400..700&family=Caveat:wght@600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#24122b;font:13px/1.35 Fredoka,system-ui,sans-serif;color:#24122b}
+  canvas{display:block;width:100vw;height:100vh;touch-action:none}
+  #ui{position:fixed;left:8px;top:8px;max-height:calc(100vh - 16px);overflow:auto;width:270px;background:#f8f0e3ee;border-radius:12px;padding:8px 10px;box-shadow:0 6px 20px #0004}
+  #ui.hide{display:none}
+  #toggle{position:fixed;right:8px;top:8px;z-index:3;border:0;border-radius:10px;padding:6px 10px;background:#8c1d40;color:#f8f0e3}
+  h3{margin:6px 0 4px;font-size:13px;color:#8c1d40}
+  button{font:inherit;border:0;border-radius:8px;padding:3px 7px;margin:2px;background:#fff;box-shadow:0 1px 2px #0002;cursor:pointer}
+  button.on{background:#f0b43c}
+  .stops{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+  .stops button{margin:0;padding:3px 2px;font-size:11px}
+  .stops button.mini{background:#efe5d4}
+  input[type=range]{width:100%}
+  #info{font-family:"DM Mono",monospace;font-size:11px;white-space:pre;color:#4a2a4f}
+</style>
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.min.js", "three/addons/": "../vendor/addons/" } }
+</script>
+</head>
+<body>
+<button id="toggle">UI</button>
+<div id="ui">
+  <h3>Stopp → arrival camera</h3>
+  <div class="stops" id="stops"></div>
+  <div><label><input type="checkbox" id="sheet"> sheet-up framing</label> <label><input type="checkbox" id="free"> fri kamera</label> <label><input type="checkbox" id="ph" checked> placeholders</label></div>
+  <h3>State för valt stopp</h3>
+  <button data-st="locked">locked</button><button data-st="ready">ready</button><button data-st="visited">visited</button>
+  <button id="allVisited">alla visited</button><button id="allLocked">alla locked</button>
+  <h3>Händelse</h3>
+  <button id="event">▶ playStationEvent</button>
+  <div id="fx"></div>
+  <h3>Påskägg (react)</h3>
+  <div id="eggs"></div>
+  <h3>Tåg u <span id="uval"></span></h3>
+  <input type="range" id="u" min="0" max="1" step="0.0005" value="0">
+  <button id="ride">🚂 åk till nästa</button>
+  <h3>Tid <span id="tval"></span></h3>
+  <input type="range" id="tod" min="0" max="1" step="0.01" value="0">
+  <div id="info"></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { createWorld } from './world.js';
+
+const Q = new URLSearchParams(location.search);
+const canvas = document.createElement('canvas'); document.body.prepend(canvas);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(43, innerWidth / innerHeight, .1, 500);
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+
+const t0 = performance.now();
+const world = await createWorld({ scene, renderer, camera });
+const loadMs = Math.round(performance.now() - t0);
+window.__world = world; window.THREE = THREE;
+
+const controls = new OrbitControls(camera, canvas); controls.enableDamping = true; controls.enabled = false;
+
+// ---- placeholders
+const phGroup = new THREE.Group(); scene.add(phGroup);
+const COL = { maja: '#ff8fa3', mattias: '#778568', conductor: '#283c58', maria: '#c5a6a0', nurse: '#b2d3d1', fan: '#d892ab', patrik: '#a7473e', syster: '#b8a88a', sebastian: '#6b7883', friend1: '#d8a8b5', friend2: '#a7b99a', friend3: '#b7abd2' };
+function capsule(h, col, label) {
+  const g = new THREE.Group(), r = h * .2;
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, h - 2 * r, 4, 10), new THREE.MeshLambertMaterial({ color: col }));
+  m.position.y = h / 2; m.castShadow = true; g.add(m);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(r * 1.25, 12, 10), new THREE.MeshLambertMaterial({ color: '#f1c7a5' })); head.position.y = h - r * 1.1; g.add(head);
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(r * .35, r * .9, 8), new THREE.MeshLambertMaterial({ color: '#24122b' })); nose.rotation.x = Math.PI / 2; nose.position.set(0, h - r * 1.1, r * 1.3); g.add(nose);
+  g.name = label; return g;
+}
+const poseH = { crouch: .62, peek: .85, sit: .72, stand: 1 };
+world.stations.forEach(s => {
+  const m = capsule(1.78, COL.maja, 'maja'); m.position.copy(s.standPos); m.rotation.y = s.standFacing; phGroup.add(m);
+  for (const n of s.npcSpots) { const c = capsule(n.who === 'conductor' ? 1.5 : 1.52, COL[n.who] || '#999', n.who); c.position.copy(n.pos); c.rotation.y = n.facing; phGroup.add(c); }
+  const ms = s.mattiasSpot; const c = capsule(1.55 * (poseH[ms.pose] || 1), COL.mattias, 'mattias'); c.position.copy(ms.pos); c.rotation.y = ms.facing; phGroup.add(c);
+  for (const sp of Object.values(s.spots || {})) { const r = new THREE.Mesh(new THREE.TorusGeometry(.3, .04, 6, 20), new THREE.MeshBasicMaterial({ color: '#f0b43c' })); r.rotation.x = Math.PI / 2; r.position.copy(sp.pos).y += .03; phGroup.add(r); }
+});
+const seatDummy = capsule(1.3, COL.maja, 'seated'); world.train.seat.add(seatDummy);
+document.getElementById('ph').onchange = e => { phGroup.visible = e.target.checked; seatDummy.visible = e.target.checked; };
+
+// ---- state
+let cur = +(Q.get('stop') ?? 0), useSheet = Q.get('sheet') === '1', trainU = world.stations[cur].trainU;
+const states = world.stations.map(() => 'locked');
+const initState = Q.get('state');
+world.stations.forEach((s, i) => { const st = initState || (i < cur ? 'visited' : i === cur ? 'ready' : 'locked'); states[i] = st; world.setStationState(i, st); world.setSign(i, st === 'locked' ? s.t : st === 'visited' ? '✓ ' + s.t : 'Nu!'); });
+const tod = Q.has('tod') ? +Q.get('tod') : cur / 18; world.setTimeOfDay(tod);
+document.getElementById('tod').value = tod;
+function frame(i) {
+  const s = world.stations[i];
+  camera.position.copy(useSheet ? s.sheetCameraPos : s.cameraPos); controls.target.copy(useSheet ? s.sheetCameraTarget : s.cameraTarget); camera.lookAt(controls.target);
+}
+function goto(i) {
+  cur = i; trainU = world.stations[i].trainU; world.setTrainU(trainU); document.getElementById('u').value = trainU; frame(i); renderStops();
+}
+// UI
+const stopsEl = document.getElementById('stops');
+function renderStops() { stopsEl.innerHTML = ''; world.stations.forEach((s, i) => { const b = document.createElement('button'); b.textContent = `${s.t} ${s.id.slice(0, 7)}`; b.className = (s.kind === 'mini' ? 'mini ' : '') + (i === cur ? 'on' : ''); b.onclick = () => goto(i); stopsEl.append(b); }); }
+document.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { const st = b.dataset.st; states[cur] = st; world.setStationState(cur, st); world.setSign(cur, st === 'locked' ? world.stations[cur].t : st === 'visited' ? '✓ ' + world.stations[cur].t : 'om 12 min'); });
+document.getElementById('allVisited').onclick = () => world.stations.forEach((s, i) => { world.setStationState(i, 'visited'); world.setSign(i, '✓ ' + s.t); });
+document.getElementById('allLocked').onclick = () => world.stations.forEach((s, i) => { world.setStationState(i, 'locked'); world.setSign(i, s.t); });
+document.getElementById('event').onclick = () => world.playStationEvent(cur);
+const fxEl = document.getElementById('fx');
+for (const k of Object.keys(world.fx)) { const b = document.createElement('button'); b.textContent = k; b.onclick = () => world.fx[k](world.stations[cur].standPos.clone().add(new THREE.Vector3(0, 1.8, 0))); fxEl.append(b); }
+const eggsEl = document.getElementById('eggs');
+for (const id of [...new Set(world.pickables.map(p => p.id)), 'loco-heart']) { const b = document.createElement('button'); b.textContent = id; b.onclick = () => world.react(id); eggsEl.append(b); }
+document.getElementById('sheet').checked = useSheet; document.getElementById('sheet').onchange = e => { useSheet = e.target.checked; frame(cur); };
+document.getElementById('free').onchange = e => { controls.enabled = e.target.checked; };
+document.getElementById('u').oninput = e => { trainU = +e.target.value; world.setTrainU(trainU); };
+document.getElementById('tod').oninput = e => world.setTimeOfDay(+e.target.value);
+document.getElementById('toggle').onclick = () => document.getElementById('ui').classList.toggle('hide');
+if (Q.get('ui') === '0') document.getElementById('ui').classList.add('hide');
+let ride = null;
+document.getElementById('ride').onclick = () => {
+  if (cur >= 18) return; const a = trainU, b = world.stations[cur + 1].trainU, dur = 3.6; const start = performance.now(); const next = cur + 1;
+  ride = now => { const p = Math.min(1, (now - start) / 1000 / dur), e = p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; trainU = a + (b - a) * e; world.setTrainU(trainU);
+    const tc = world.travelCamera(trainU); camera.position.lerp(tc.position, .1); controls.target.lerp(tc.target, .12); camera.lookAt(controls.target);
+    if (p >= 1) { ride = null; cur = next; renderStops(); frame(cur); } };
+};
+// tap → react
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+canvas.addEventListener('pointerup', e => {
+  ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  for (const p of world.pickables) { if (ray.intersectObject(p.object, true).length) { console.log('pick', p.id); world.react(p.id, ray.intersectObject(p.object, true)[0].object); break; } }
+});
+renderStops(); goto(cur);
+if (Q.has('u')) { trainU = +Q.get('u'); world.setTrainU(trainU); }
+if (Q.get('cam') === 'free') { controls.enabled = true; document.getElementById('free').checked = true; }
+if (Q.get('ph') === '0') { phGroup.visible = false; seatDummy.visible = false; document.getElementById('ph').checked = false; }
+if (Q.has('travel')) { const k = +Q.get('travel'), f = +(Q.get('tf') || .5); trainU = world.stations[k].trainU + (world.stations[k + 1].trainU - world.stations[k].trainU) * f; world.setTrainU(trainU);
+  const tc = world.travelCamera(trainU); camera.position.copy(tc.position); controls.target.copy(tc.target); camera.lookAt(controls.target); }
+if (Q.has('cl')) { const [x, y, z, tx, ty, tz] = Q.get('cl').split(',').map(Number); const c = world.debug.ctxs[cur]; camera.position.copy(c.L(x, y, z)); controls.target.copy(c.L(tx, ty, tz)); camera.lookAt(controls.target); }
+if (Q.has('campos')) { const [x, y, z, tx, ty, tz] = Q.get('campos').split(',').map(Number); camera.position.set(x, y, z); controls.target.set(tx, ty, tz); camera.lookAt(controls.target); }
+
+const info = document.getElementById('info');
+let last = performance.now(), el = 0, frames = 0, fpsT = 0, fps = 0;
+window.__stats = { loadMs };
+function loop(now) {
+  const dt = Math.min(.1, (now - last) / 1000); last = now; el += dt; frames++; fpsT += dt; if (fpsT > .5) { fps = Math.round(frames / fpsT); frames = 0; fpsT = 0; }
+  if (ride) ride(now);
+  if (controls.enabled) controls.update();
+  world.update(dt, el);
+  renderer.render(scene, camera);
+  const r = renderer.info.render; window.__stats = { loadMs, calls: r.calls, tris: r.triangles, fps, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures };
+  info.textContent = `fps ${fps}  calls ${r.calls}  tris ${r.triangles}\ngeo ${renderer.info.memory.geometries} tex ${renderer.info.memory.textures} load ${loadMs}ms\nstop ${cur} ${world.stations[cur].id} u=${trainU.toFixed(4)}`;
+  document.getElementById('uval').textContent = trainU.toFixed(3); document.getElementById('tval').textContent = (+document.getElementById('tod').value).toFixed(2);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+if (Q.get('event') === '1') setTimeout(() => world.playStationEvent(cur), 400);
+window.__ready = true;
+</script>
+</body>
+</html>

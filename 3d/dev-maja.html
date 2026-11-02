@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Maja – karaktärslabb</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#cfe3f2;font-family:system-ui,-apple-system,sans-serif}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  #ui{position:fixed;left:0;right:0;bottom:0;max-height:46%;overflow:auto;background:rgba(248,240,227,.93);color:#24122b;
+      padding:8px 8px calc(8px + env(safe-area-inset-bottom));font-size:12px;border-radius:14px 14px 0 0;box-shadow:0 -4px 18px #24122b33}
+  #ui.hidden{display:none}
+  #ui h4{margin:6px 2px 3px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8c1d40}
+  #ui button{font:inherit;margin:2px;padding:6px 8px;border:0;border-radius:9px;background:#fff;color:#24122b;box-shadow:0 1px 2px #24122b22}
+  #ui button.on{background:#8c1d40;color:#f8f0e3}
+  #ui select{font:inherit;padding:5px;border-radius:8px}
+  #info{position:fixed;top:calc(8px + env(safe-area-inset-top));left:10px;font:12px/1.3 ui-monospace,monospace;color:#24122b;background:#f8f0e3cc;padding:4px 7px;border-radius:8px}
+</style>
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.min.js", "three/addons/": "../vendor/addons/" } }
+</script>
+</head>
+<body>
+<div id="info"></div>
+<div id="ui"></div>
+<script type="module">
+import * as THREE from 'three';
+import { createMaja, createPerson, PRESETS, ANIMATIONS, EXPRESSIONS, PROPS, HATS } from './maja.js';
+
+const Q = new URLSearchParams(location.search);
+const info = document.getElementById('info');
+const errors = [];
+addEventListener('error', e => { errors.push(String(e.message)); info.textContent = 'ERR ' + e.message; });
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(Q.get('bg') || '#cfe3f2');
+scene.fog = new THREE.Fog(scene.background, 14, 30);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 100);
+
+const hemi = new THREE.HemisphereLight('#e4f0ff', '#a88d6a', 1.15); scene.add(hemi);
+const sun = new THREE.DirectionalLight('#ffe0b5', 2.3); sun.position.set(3.5, 6, 4.5);
+sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 0.5, far: 20 }); sun.shadow.bias = -0.0005;
+scene.add(sun);
+const ground = new THREE.Mesh(new THREE.CircleGeometry(12, 48), new THREE.MeshStandardMaterial({ color: '#8fae84', roughness: 0.95 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+const plat = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.7, 0.08, 40), new THREE.MeshStandardMaterial({ color: '#e7d8bf', roughness: 0.9 }));
+plat.position.y = -0.035; plat.receiveShadow = true; scene.add(plat);
+// a bench for sit tests
+const bench = new THREE.Group();
+const wood = new THREE.MeshStandardMaterial({ color: '#9e6b43', roughness: 0.85 });
+
+// ---- characters
+const chars = {};
+const lineup = Q.get('lineup') === '1';
+const maja = createMaja(); chars.maja = maja; scene.add(maja.group);
+const npcNames = lineup ? ['mattias', 'conductor', 'maria', 'patrik', 'syster', 'sebastian', 'friend1', 'friend2', 'friend3', 'nurse', 'fan']
+                        : (Q.get('npcs') ?? 'mattias,conductor,maria').split(',').filter(Boolean);
+npcNames.forEach((n, i) => {
+  const c = createPerson(n); chars[n] = c; scene.add(c.group);
+  if (lineup) {
+    const row = i < 6 ? 0 : 1, k = row ? i - 6 : i, cnt = row ? 5 : 6;
+    c.group.position.set((k - (cnt - 1) / 2) * 0.95 + (row ? 0 : 0), 0, row ? -2.6 : -1.3);
+  } else {
+    const xs = [-1.05, 1.05, -2.0, 2.0, -2.9, 2.9];
+    c.group.position.set(xs[i] ?? i, 0, -0.55 - Math.abs(xs[i] ?? 0) * 0.15);
+    c.group.rotation.y = -(xs[i] ?? 0) * 0.18;
+  }
+});
+const sitH = maja.sitHeight;
+if (Q.get('anim') === 'sit' || Q.get('seated') === '1') { // a bench at the reported seat height, behind the focus character
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.36), wood); seat.position.set(0, sitH - 0.025, -0.04); seat.castShadow = seat.receiveShadow = true; bench.add(seat);
+  for (const x of [-0.38, 0.38]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, sitH - 0.05, 0.3), wood); leg.position.set(x, (sitH - 0.05) / 2, -0.04); bench.add(leg); }
+  scene.add(bench);
+}
+
+let focusName = Q.get('who') || 'maja';
+const focus = () => chars[focusName] || maja;
+
+// ---- camera presets
+function frame(mode) {
+  const f = focus(), p = f.group.position, H = f.height;
+  if (mode === 'face') { camera.position.set(p.x + 0.15, p.y + H * 0.8, p.z + 1.25); camera.lookAt(p.x, p.y + H * 0.78, p.z); }
+  else if (mode === 'close') { camera.position.set(p.x + 0.35, p.y + H * 0.72, p.z + 2.4); camera.lookAt(p.x, p.y + H * 0.55, p.z); }
+  else if (mode === 'far') { camera.position.set(p.x + 1.8, p.y + 3.0, p.z + 7.5); camera.lookAt(p.x, p.y + 0.7, p.z - 0.6); }
+  else if (mode === 'side') { camera.position.set(p.x + 3.2, p.y + H * 0.6, p.z + 0.6); camera.lookAt(p.x, p.y + H * 0.5, p.z); }
+  else if (mode === 'back') { camera.position.set(p.x - 0.8, p.y + H * 0.85, p.z - 3.0); camera.lookAt(p.x, p.y + H * 0.55, p.z); }
+  else if (mode === 'lineup') { camera.position.set(0, 2.6, 7.6); camera.lookAt(0, 0.65, -1.6); }
+  else { camera.position.set(p.x + 0.6, p.y + 1.5, p.z + 4.6); camera.lookAt(p.x, p.y + 0.72, p.z - 0.4); }
+}
+let camMode = Q.get('cam') || (lineup ? 'lineup' : 'mid');
+frame(camMode);
+
+// ---- apply URL state
+function applyParams() {
+  const f = focus();
+  if (Q.get('hair')) f.setHair(Q.get('hair'));
+  if (Q.get('expr')) f.setExpression(Q.get('expr'));
+  if (Q.get('hat')) f.setHat(Q.get('hat'), true);
+  if (Q.get('prop')) f.setProp('right', Q.get('prop'), true);
+  if (Q.get('lprop')) f.setProp('left', Q.get('lprop'), true);
+  if (Q.get('coat')) f.setOutfit({ coat: '#' + Q.get('coat') });
+  if (Q.get('look') === 'cam') f.lookAt(camera.position);
+  if (Q.get('look') === 'mattias' && chars.mattias) f.lookAt(chars.mattias.group.position.clone().add(new THREE.Vector3(0, 1.2, 0)));
+  if (Q.get('all')) for (const c of Object.values(chars)) if (c !== f) c.play(Q.get('all'), { loop: true });
+  const a = Q.get('anim');
+  if (a) f.play(a, { loop: Q.get('loop') === '1', side: Q.get('side') || undefined, style: Q.get('style') || undefined, seated: Q.get('seated') === '1' });
+}
+applyParams();
+
+// ---- UI
+const ui = document.getElementById('ui');
+if (Q.get('ui') === '0') ui.classList.add('hidden');
+function section(title, items, fn, cls) {
+  const h = document.createElement('h4'); h.textContent = title; ui.appendChild(h);
+  const box = document.createElement('div'); ui.appendChild(box);
+  for (const it of items) { const b = document.createElement('button'); b.textContent = it ?? '∅'; b.onclick = () => fn(it, b); box.appendChild(b); }
+}
+const sel = document.createElement('select');
+for (const n of Object.keys(chars)) { const o = document.createElement('option'); o.value = o.textContent = n; sel.appendChild(o); }
+sel.value = focusName; sel.onchange = () => { focusName = sel.value; frame(camMode); };
+ui.appendChild(sel);
+let loopOn = false;
+const lb = document.createElement('button'); lb.textContent = 'loop: av'; lb.onclick = () => { loopOn = !loopOn; lb.textContent = 'loop: ' + (loopOn ? 'på' : 'av'); lb.classList.toggle('on', loopOn); }; ui.appendChild(lb);
+for (const m of ['face', 'close', 'mid', 'far', 'side', 'back', 'lineup']) { const b = document.createElement('button'); b.textContent = '📷 ' + m; b.onclick = () => { camMode = m; frame(m); }; ui.appendChild(b); }
+section('Animationer', ANIMATIONS, n => focus().play(n, { loop: loopOn }));
+section('Peek-sida', ['left', 'right', 'up'], s => focus().play('peek', { loop: true, side: s }));
+section('Telefon', ['call', 'selfie', 'scroll', 'film'], s => focus().play('phone', { loop: loopOn, style: s }));
+section('Uttryck', EXPRESSIONS, n => focus().setExpression(n));
+section('Rekvisita (höger)', [null, ...PROPS], n => focus().setProp('right', n));
+section('Rekvisita (vänster)', [null, ...PROPS], n => focus().setProp('left', n));
+section('Hattar', [null, ...HATS], n => focus().setHat(n));
+section('Rock', [null, '#b88a5a', '#8d8b91', '#6e1f33', '#e8dcc6', '#2f4a3a'], c => focus().setOutfit({ coat: c }));
+section('Frisyr', ['long', 'ponytail', 'bun', 'short'], h => focus().setHair(h));
+section('Titta', ['kamera', 'Mattias', 'ingen'], w => focus().lookAt(w === 'kamera' ? camera.position : w === 'Mattias' && chars.mattias ? chars.mattias.group.position.clone().setY(1.2) : null));
+section('Gå', ['fram', 'tillbaka', 'spring'], w => { const f = focus(); const p = f.group.position.clone(); f.walkTo(p.add(new THREE.Vector3(w === 'tillbaka' ? 0 : 0, 0, w === 'tillbaka' ? -1.5 : 1.5)), w === 'spring' ? 2.6 : 1.1); });
+
+// ---- loop
+const clock = new THREE.Clock();
+function stats() { const r = renderer.info.render; info.textContent = `${focusName} · calls ${r.calls} · tris ${(r.triangles / 1000).toFixed(1)}k${errors.length ? ' · ERR' : ''}`; }
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+const freeze = Q.has('t') ? parseFloat(Q.get('t')) : null;
+if (freeze !== null) {
+  const steps = Math.round(freeze * 60);
+  for (let i = 0; i < steps; i++) for (const c of Object.values(chars)) c.update(1 / 60);
+  for (const c of Object.values(chars)) c.update(0);
+  if (Q.get('look') === 'cam') focus().lookAt(camera.position);
+  renderer.render(scene, camera); stats();
+  window.__ready = true; window.__stats = { ...renderer.info.render, errors };
+} else {
+  renderer.setAnimationLoop(() => {
+    const dt = clock.getDelta();
+    for (const c of Object.values(chars)) c.update(dt);
+    renderer.render(scene, camera); stats();
+  });
+  setTimeout(() => { window.__ready = true; window.__stats = { ...renderer.info.render, errors }; }, 300);
+}
+window.__dev = { THREE, chars, scene, camera, renderer };
+</script>
+</body>
+</html>
