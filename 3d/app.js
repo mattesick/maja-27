@@ -51,15 +51,18 @@ function fallback(error) {
 /* ------------------------------------------------------------------ camera rig */
 // Every shot is a goal (position + look target) approached with exponential damping. `rate` itself eases toward
 // `rateGoal` so cuts between very different shots start gently (no sudden yaw).
-const cam = { goalPos: v(), goalTarget: v(), target: v(), rate: 2, rateGoal: 2, follow: null, snap: false };
+const FOV = 43;
+const cam = { goalPos: v(), goalTarget: v(), target: v(), rate: 2, rateGoal: 2, follow: null, snap: false, fovGoal: FOV };
 const L = (i, x, y, z) => world.debug?.ctxs?.[i]?.L ? world.debug.ctxs[i].L(x, y, z) : world.stations[i].standPos.clone().add(v(x, y, z));
 // Per-stop arrival-camera tweaks (station-local coordinates, same frame as world.js station defs).
 const CAM = {
+  spackel: { p: [2.3, 2.75, 7.0], t: [1.0, 1.0, -6.0], arrivalOnly: true },
+  korsberga: { p: [1.55, 4.4, 10.5], t: [.4, .35, -5.2], arrivalOnly: true },   // whole GRATTIS MAJA 27 banner in frame
   spelkvall: { p: [3.2, 2.9, 1.6], t: [1.0, 1.0, -7.6] },
   farhagen: { p: [2.9, 1.9, 5.4], t: [.2, .75, -4.6] },
   shuffle: { p: [7.4, 2.9, 3.2], t: [3.6, 1.6, -5.6] },
   maria: { p: [2.2, 5.5, 9.5], t: [.8, 2.6, -6] },
-  cincin: { p: [1.4, 2.35, 2.8], t: [1.1, 1.25, -6.1] },
+  cincin: { p: [1.05, 2.05, -1.6], t: [1.05, 1.2, -5.6], fov: 57 },   // finale: two-shot in front of the table for two (wider lens – the parked train is right behind the camera)
   skaftesfall: { p: [3.5, 4.4, 10.5], t: [2.1, .35, -5.2] },
   fika: { p: [3.3, 4.4, 10.5], t: [1.8, .35, -5.2] },
 };
@@ -68,12 +71,28 @@ const MATTIAS_FIX = {
   korsberga: [1.3, 0, -7.6], skaftesfall: [4.15, 0, -6.35], shuffle: [3.3, .15, -8.7], maria: [2.7, 0, -7.1],
   fagelbo: [3.5, 0, -10.6], fika: [4.2, 0, -7.5], logen: [-.95, 0, -6.95],
 };
+// finale staging (station-local): they stand in front of the table, close enough to clink, both 3/4 to the camera
+const CINCIN = { maja: [.75, .2, -5.3], mattias: [1.45, .2, -5.45] };
+// heads turn toward each other but stay readable from the camera (a pure look-at would show the back of Maja's hair)
+function lookPartner(i, who, other, toCam = .5) {
+  const p = other.group.position; _a.set(p.x, p.y + 1.25, p.z).lerp(camPosOf(i), toCam); who.lookAt(_a);
+}
+// [distance factor, target lift (m)] for the arrival framing; 1/0 keeps a hand-tuned shot as is
+const ZOOM = {
+  default: [.7, .45], korsberga: [.82, .6], neuro: [.74, .8], spelkvall: [.85, .2], recept: [.72, .9], maria: [.8, .4],
+  tittut: [.75, .4], snart: [.8, .3], cincin: [1, 0],
+};
 function shot(i, { sheet = false, rate = 2.2, snap = false } = {}) {
   const s = world.stations[i], o = CAM[s.id];
-  cam.follow = null;
+  cam.follow = null; cam.fovGoal = o?.fov || FOV;
   if (o && !sheet) { cam.goalPos.copy(L(i, ...o.p)); cam.goalTarget.copy(L(i, ...o.t)); }
-  else if (o && sheet) { cam.goalTarget.copy(L(i, o.t[0], o.t[1] - .5, o.t[2])); cam.goalPos.copy(L(i, ...o.p)).sub(cam.goalTarget).multiplyScalar(1.3).add(cam.goalTarget).add(_a.set(0, .5, 0)); }
+  else if (o && sheet && !o.arrivalOnly) { cam.goalTarget.copy(L(i, o.t[0], o.t[1] - .5, o.t[2])); cam.goalPos.copy(L(i, ...o.p)).sub(cam.goalTarget).multiplyScalar(1.3).add(cam.goalTarget).add(_a.set(0, .5, 0)); }
   else { cam.goalPos.copy(sheet ? s.sheetCameraPos : s.cameraPos); cam.goalTarget.copy(sheet ? s.sheetCameraTarget : s.cameraTarget); }
+  if (!sheet) {
+    // arrival close-up: dolly in toward a slightly raised target so Maja + the showpiece read on a phone
+    const z = ZOOM[s.id] ?? ZOOM.default, k = z[0], lift = z[1];
+    cam.goalTarget.y += lift; cam.goalPos.sub(cam.goalTarget).multiplyScalar(k).add(cam.goalTarget);
+  }
   cam.rateGoal = rate; if (snap) cam.snap = true;
 }
 function sheetExpanded() { const el = $('#sheet'); return !el.hidden && !el.classList.contains('collapsed'); }
@@ -81,7 +100,9 @@ function sheetExpanded() { const el = $('#sheet'); return !el.hidden && !el.clas
 const band = { top: 130, bottom: 700 }; let bandAt = -1;
 function measureBand() {
   const ann = $('#announcement'), ticket = $('.mini-ticket');
-  band.top = Math.max(ticket.getBoundingClientRect().bottom, ann.hidden ? 0 : ann.getBoundingClientRect().bottom) + 6;
+  // the ticket fades out while traveling – then only the Resplan corner (and a conductor line) is in the way
+  const ticketBottom = document.body.classList.contains('traveling') ? 64 : ticket.getBoundingClientRect().bottom;
+  band.top = Math.max(ticketBottom, ann.hidden ? 0 : ann.getBoundingClientRect().bottom) + 6;
   const sheet = $('#sheet');
   band.bottom = !sheet.hidden ? sheet.offsetTop : $('.departure-dock').offsetTop;
 }
@@ -112,6 +133,7 @@ function frame(dt) {
   cam.rate += (cam.rateGoal - cam.rate) * Math.min(1, dt * 1.6);
   const k = (reduced || cam.snap) ? 1 : 1 - Math.exp(-dt * cam.rate); cam.snap = false;
   camera.position.lerp(cam.goalPos, k); cam.target.lerp(cam.goalTarget, k); camera.lookAt(cam.target);
+  if (Math.abs(camera.fov - cam.fovGoal) > .01) { camera.fov += (cam.fovGoal - camera.fov) * k; camera.updateProjectionMatrix(); }
   if (phase === 'waiting' && elapsed > nextIdleAt && !reduced) randomIdle();
   updateFraming(dt);
   renderer.render(scene, camera);
@@ -231,7 +253,7 @@ function blendYaw(from, a, b, w = .4) {
 }
 function mattiasSpot(i) {
   const s = world.stations[i], fix = MATTIAS_FIX[s.id];
-  if (s.id === 'cincin' && s.spots?.table) return { ...s.mattiasSpot, facing: blendYaw(s.mattiasSpot.pos, s.spots.table.pos, camPosOf(i), .45) };
+  if (s.id === 'cincin') { const pos = L(i, ...CINCIN.mattias); return { ...s.mattiasSpot, pos, facing: blendYaw(pos, L(i, ...CINCIN.maja), camPosOf(i), .45) }; }
   if (!fix) return s.mattiasSpot;
   const pos = L(i, ...fix); return { ...s.mattiasSpot, pos, facing: yawTo(pos, camPosOf(i)) };
 }
@@ -280,7 +302,7 @@ function stage(i) {
 }
 function parkConductor(i) {
   const cond = npc('conductor'); if (!cond) return;
-  const { pos, facing } = conductorSpot(i); place(cond, pos, facing); void cond.play('idle', { loop: true });
+  const { pos, facing } = conductorSpot(i); place(cond, pos, world.stations[i].id === 'logen' ? yawTo(pos, camPosOf(i)) : facing); void cond.play('idle', { loop: true });
 }
 
 /* ------------------------------------------------------------------ Maja helpers */
@@ -325,6 +347,7 @@ async function standUp(c, floorY) {
 function majaSpot(i) {
   const s = world.stations[i], id = s.id;
   const spotKey = { spackel: 'film', spelkvall: 'sofa', farhagen: 'lamb', shuffle: 'throw', fagelbo: 'nest', fika: 'bench', tittut: 'bench', cincin: 'table' }[id];
+  if (id === 'cincin') { const pos = L(i, ...CINCIN.maja); return { pos, facing: blendYaw(pos, mattiasSpot(i).pos, camPosOf(i), .45), key: 'table' }; }
   if (spotKey && s.spots?.[spotKey]) {
     const pos = s.spots[spotKey].pos.clone(), o = CAM[id];
     const facing = id === 'cincin' ? blendYaw(pos, mattiasSpot(i).pos, camPosOf(i), .45) : o?.faceCam ? yawTo(pos, L(i, ...o.p)) : s.spots[spotKey].facing;
@@ -366,8 +389,8 @@ function applyFinal(i, { teleport = true } = {}) {
   rest = f.rest || null; seated = null;
   if (f.seat) { seated = s.id; maja.group.position.y = SEAT_TOP[s.id] - maja.sitHeight; }
   void maja.play(...(rest || ['idle', { loop: true }]));
-  if (f.lookMattias) { const m = npc('mattias'); if (m) maja.lookAt(_a.copy(m.group.position).setY(m.group.position.y + 1.2)); }
-  if (s.id === 'cincin') { const m = npc('mattias'); if (m) { m.setProp('right', 'glass', true); m.lookAt(_b.copy(maja.group.position).setY(1.3)); } }
+  if (f.lookMattias && s.id !== 'cincin') { const m = npc('mattias'); if (m) maja.lookAt(_a.copy(m.group.position).setY(m.group.position.y + 1.2)); }
+  if (s.id === 'cincin') { const m = npc('mattias'); if (m) { m.setProp('right', 'glass', true); lookPartner(i, maja, m, .5); lookPartner(i, m, maja, .35); } }
   if (s.id === 'maria') { const m = npc('maria'); if (m) { m.group.rotation.y = yawTo(m.group.position, maja.group.position); } }
   maja.update(0);
 }
@@ -391,12 +414,11 @@ const BEATS = {
     maja.setProp('right', 'controller'); await sitDown(maja, x.s.spots.sofa, SEAT_TOP.spelkvall, ['gaming', { loop: true, seated: true }]); seated = 'spelkvall';
     x.event(); await x.w(1.3); if (x.seq.cancelled) return;
     seated = null; await standUp(maja, x.s.spots.sofa.pos.y); maja.setExpression('laugh'); await x.play('fistPump');
-    for (const k of ['friend3']) { const c = npc(k); if (c) void c.play('cheer'); }
-    await sitDown(maja, x.s.spots.sofa, SEAT_TOP.spelkvall, ['gaming', { loop: true, seated: true }]); seated = 'spelkvall';
+    for (const k of ['friend3']) { const c = npc(k); if (c) void c.play('cheer'); }   // applyFinal seats her again
   },
   async zara(x) {
     maja.setHat('headphones'); maja.setProp('right', 'mic'); maja.setExpression('happy'); void maja.play('dance', { loop: true });
-    x.event(); await x.w(2.5); maja.setExpression('laugh'); await x.play('cheer');
+    x.event(); await x.w(1.7); maja.setExpression('laugh'); await x.play('cheer');
   },
   async farhagen(x) {
     maja.setExpression('love'); void maja.play('crouch', { loop: true }); x.event(); await x.w(1.2);
@@ -405,26 +427,26 @@ const BEATS = {
   async skaftesfall(x) {
     maja.setExpression('happy'); x.event(); await x.w(.45); maja.setExpression('preSneeze'); await x.w(.35);
     maja.setExpression('sneeze'); world.fx.sneeze?.(maja.getHeadTop(v())); const sn = x.play('sneeze'); await x.w(1.6); await sn;
-    maja.setProp('right', 'tissue'); maja.setExpression('laugh'); await x.play('point'); maja.setExpression('happy');
+    maja.setProp('right', 'tissue'); maja.setExpression('laugh'); await x.w(.4);
   },
   async patrik(x) {
     const p = npc('patrik'); if (p) { p.lookAt(null); void p.play('chop', { loop: true }); }
     x.event(); maja.setExpression('happy'); await x.play('wave'); maja.setExpression('surprised'); await x.w(.6);
-    if (p) void p.play('scratchHead'); maja.setExpression('sigh'); await x.play('facepalm'); maja.setExpression('laugh'); await x.play('laugh');
+    if (p) void p.play('scratchHead'); maja.setExpression('sigh'); await x.play('facepalm'); maja.setExpression('laugh');
     if (p) { await x.w(.2); void p.play('idle', { loop: true }); }
   },
   async recept(x) {
-    maja.setProp('right', 'phone'); void maja.play('scroll', { loop: true }); x.event(); await x.w(2.2);
+    maja.setProp('right', 'phone'); void maja.play('scroll', { loop: true }); x.event(); await x.w(1.6);
     maja.setProp('right', 'fork'); maja.setExpression('happy'); await x.play('cheer');
   },
   async shuffle(x) {
     maja.setProp('right', 'puck'); const sl = x.play('slide'); await x.w(.75); maja.setProp('right', null); x.event(); await sl;
-    await x.w(.9); maja.setExpression('laugh'); await x.play('cheer'); await x.play('pointSelf');
+    await x.w(.3); maja.setExpression('laugh'); await x.play('cheer');
   },
   async maria(x) {
     const m = npc('maria'); maja.setProp('right', 'phone'); x.event(); await x.w(.25);
-    maja.setExpression('sigh'); await x.play('sigh'); await x.play('facepalm'); maja.setProp('right', null); maja.setExpression('laugh');
-    const spot = majaSpot(x.i); await walk(maja, spot.pos, { speed: 1.0, seq: x.seq }); if (x.seq.cancelled) return;
+    maja.setExpression('sigh'); await x.w(.6); maja.setProp('right', null); maja.setExpression('laugh');
+    const spot = majaSpot(x.i); await walk(maja, spot.pos, { speed: 1.4, seq: x.seq }); if (x.seq.cancelled) return;
     await turnTo(maja, spot.facing); if (m) { m.group.rotation.y = yawTo(m.group.position, maja.group.position); void m.play('hug'); }
     maja.setExpression('love'); await x.play('hug'); maja.setExpression('happy');
   },
@@ -432,7 +454,7 @@ const BEATS = {
     x.event(); await x.play('wave');
     for (const k of ['syster', 'sebastian']) { const c = npc(k); if (c) void c.play('wave').then(() => c.play('hammer', { loop: true })); }
     await x.w(.9); maja.setExpression('surprised'); await x.w(.6); maja.setExpression('sneeze'); await x.w(.45);
-    maja.setHat('hardHat'); maja.setExpression('laugh'); await x.play('laugh');
+    maja.setHat('hardHat'); maja.setExpression('laugh'); await x.w(.4);
   },
   async langd(x) {
     x.event(); maja.setExpression('happy'); await x.w(1.1); maja.setExpression('wink'); await x.play('flex'); maja.setHat('crown'); maja.setExpression('wink');
@@ -450,24 +472,24 @@ const BEATS = {
     const m = npc('mattias'); if (m) void m.play('wave').then(() => m.play('peek', { loop: true })); maja.setExpression('wink');
   },
   async logen(x) {
-    maja.setProp('right', 'mic'); maja.setExpression('laugh'); void maja.play('dance', { loop: true }); x.event(); await x.w(2.8);
-    await x.play('spin'); await x.play('bow');
+    maja.setProp('right', 'mic'); maja.setExpression('laugh'); void maja.play('dance', { loop: true }); x.event(); await x.w(1.8);
+    await x.play('spin');
   },
   async snart(x) {
-    x.event(); const spot = majaSpot(x.i); await walk(maja, spot.pos, { speed: 1.0, seq: x.seq }); if (x.seq.cancelled) return;
+    x.event(); const spot = majaSpot(x.i); await walk(maja, spot.pos, { speed: 1.3, seq: x.seq }); if (x.seq.cancelled) return;
     const m = npc('mattias'); if (m) maja.lookAt(_a.copy(m.group.position).setY(1.4)); maja.setExpression('love'); await x.w(1.2);
   },
   async cincin(x) {
     const m = npc('mattias');
-    if (m) { m.lookAt(_b.copy(maja.group.position).setY(maja.group.position.y + 1.2)); maja.lookAt(_a.copy(m.group.position).setY(m.group.position.y + 1.2)); await x.play('wave', undefined, m); }
+    if (m) { lookPartner(x.i, m, maja, .35); lookPartner(x.i, maja, m, .5); await x.play('wave', undefined, m); }
     maja.setExpression('surprised'); await x.w(.5); maja.setExpression('love');
     maja.setProp('right', 'glass'); m?.setProp('right', 'glass'); await x.w(.3);
     if (m) void m.play('clink'); const ck = x.play('clink'); await x.w(1.2);
     world.fx.hearts?.(maja.getHandPosition('right', v()).lerp(m ? m.getHandPosition('right', v()) : maja.getHeadTop(v()), .5).add(v(0, .3, 0)), 10);
     x.event(); await ck;
     // slow reveal: rise and pull back
-    const from = cam.goalPos.clone(), to = from.clone().sub(cam.goalTarget).multiplyScalar(1.35).add(cam.goalTarget).add(v(0, 1.6, 0));
-    await activeTween(2.2, p => { if (!x.seq.cancelled) cam.goalPos.lerpVectors(from, to, smooth(p)); });
+    const from = cam.goalPos.clone(), to = from.clone().sub(cam.goalTarget).multiplyScalar(1.45).add(cam.goalTarget).add(v(0, 1.3, 0));
+    await activeTween(2.4, p => { if (!x.seq.cancelled) cam.goalPos.lerpVectors(from, to, smooth(p)); });
   },
 };
 
@@ -487,7 +509,7 @@ async function ride(i, { dur } = {}) {
   maja.setExpression('happy'); void maja.play('sit');
   // chase camera biased back along the train so Maja's window (carriage) sits in frame next to the loco
   cam.follow = () => { const tc = world.travelCamera(trainU, -2.4); cam.goalTarget.copy(tc.target); cam.goalPos.copy(tc.position).sub(tc.target).multiplyScalar(1.12).add(tc.target); };
-  cam.rate = .9; cam.rateGoal = 3.2;
+  cam.rate = .9; cam.rateGoal = 3.2; cam.fovGoal = FOV;
   await activeTween(d, p => { trainU = lerp(start, end, inOut(p)); world.setTrainU(trainU); });
   cam.follow = null;
 }
@@ -506,7 +528,7 @@ async function depart() {
       setPhase('traveling');
       await ride(i);
     }
-    setPhase('arriving'); stage(i); parkConductor(i); shot(i, { rate: 1.7 }); sayAnnouncement(i, 'arrival');
+    setPhase('arriving'); stage(i); parkConductor(i); shot(i, { rate: 1.7 }); sayAnnouncement(i, 'arrival'); const arrivedAt = elapsed;
     if (i >= 17) maja.setOutfit({ coat: coatColor() });
     const sequence = { cancelled: false, skip: null }; currentArrival = sequence;
     const skipped = new Promise(resolve => { sequence.skip = resolve; });
@@ -522,16 +544,21 @@ async function depart() {
         toScene(maja); maja.group.position.copy(world.train.doorPos()); maja.group.rotation.y = yawTo(maja.group.position, world.stations[i].standPos);
         void maja.play('idle', { loop: true });
         const spot = ['maria', 'snart'].includes(world.stations[i].id) ? { pos: world.stations[i].standPos, facing: world.stations[i].standFacing } : majaSpot(i);
-        await walk(maja, spot.pos, { seq: sequence }); if (sequence.cancelled) return;
+        // a brisk, happy step out (the walk cycle speeds up with it) – arrivals should land in ~4–6 s
+        const d = Math.hypot(spot.pos.x - maja.group.position.x, spot.pos.z - maja.group.position.z);
+        await walk(maja, spot.pos, { seq: sequence, speed: clamp(d / 1.9, 1.35, 1.95) }); if (sequence.cancelled) return;
         if (!['spelkvall', 'fika', 'tittut'].includes(world.stations[i].id)) await turnTo(maja, spot.facing);
       }
       if (sequence.cancelled) return;
       setPhase('event'); $('#travel-title').textContent = `${STOPS[i].t} · ${STOPS[i].station}`; $('#travel-sub').textContent = STOPS[i].kind === 'main' ? (i === 18 ? 'Slutstation' : `Station ${STOPS[i].mainIndex + 1} av 10`) : 'Hållplats';
       if (reduced) { applyFinal(i); eventP = world.playStationEvent(i); await pause(.6); return; }
       await BEATS[world.stations[i].id]?.(x);
-      await Promise.race([eventP, pause(4)]);
-      await x.w(.35);
+      // the showpiece keeps playing under the sheet – don't hold the story for its tail
+      await Promise.race([eventP, pause(.9)]);
+      await x.w(.25);
     })();
+    const cap = i === 18 ? 9.5 : STOPS[i].kind === 'main' ? 7 : 6;   // STORY.md §4 arrival budgets
+    if (!reduced) void pause(cap).then(() => { if (currentArrival === sequence && !sequence.cancelled) skipArrival(); });
     await Promise.race([arrival, skipped]); currentArrival = null;
     for (const c of live) if (c !== maja && c.group.visible && c.anim && !c.anim.def.loop) void c.play('idle', { loop: true });
     applyFinal(i, { teleport: sequence.cancelled || reduced });
@@ -540,6 +567,7 @@ async function depart() {
       // the cancelled beat unwinds on resolved promises – settle on the final pose once it has
       setTimeout(() => { if (phase === 'waiting' && activeIndex === i && !majaBusy) applyFinal(i); }, 150);
     }
+    if (TEST) (window.__arrivals ||= []).push({ i, sim: +(elapsed - arrivedAt).toFixed(2), skipped: sequence.cancelled });
     markVisited(i); setPhase('waiting'); showSheet(i); tick(); if (i === 18) announce(FINALE_FAREWELL);
     if (i === 0 && !reduced) confetti.burst(innerWidth / 2, innerHeight * .3, 65);
     if (i === 18 && !reduced) confetti.rain?.(150);
@@ -684,7 +712,7 @@ async function boot() {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.setSize(innerWidth, innerHeight); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(43, innerWidth / innerHeight, .1, 500); camera.position.set(7, 6, 12);
+    scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(FOV, innerWidth / innerHeight, .1, 500); camera.position.set(7, 6, 12);
     await document.fonts.ready;
     const [majaModule, worldModule] = await Promise.all([import('./maja.js'), import('./world.js')]);
     createPerson = majaModule.createPerson;
@@ -701,7 +729,7 @@ async function boot() {
     if (restored >= 0) { applyFinal(restored); showSheet(restored); shot(restored, { sheet: true, snap: true }); }
     else { maja.setExpression('sleepy'); maja.setProp('right', 'coffee', true); if (now() < unlockAt(8)) { requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => announce(PRE_DEPARTURE), 600))); if (!reduced) void majaOneShot('yawn'); } }
     if (TEST) window.__majaDebug = {
-      world, maja, camera, staged: () => staged, cam,
+      world, maja, camera, staged: () => staged, cam, shot, ZOOM,
       // project key points for stop i in the arrival (sheet=false) or sheet framing, incl. the sheet head shift
       probe: (i, sheet) => {
         const c = camera.clone(); c.clearViewOffset(); shot(i, { sheet }); c.position.copy(cam.goalPos); c.lookAt(cam.goalTarget); c.updateMatrixWorld(); c.updateProjectionMatrix();

@@ -402,3 +402,22 @@ body.traveling .scene-caption{opacity:0}
 .travel-caption{top:calc(max(12px,env(safe-area-inset-top)) + 124px);left:50%;right:auto;transform:translateX(-50%);width:max-content;max-width:calc(100% - 40px);background:#f8f0e3e0;border-radius:16px;padding:6px 16px 7px;box-shadow:0 6px 18px #24122b1f;text-shadow:none}
 .travel-caption>span{display:none}.travel-caption b{font:600 19px var(--display)}.travel-caption small{font:17px var(--hand)}
 @media(min-width:700px){.scene-caption{left:6vw;transform:none;bottom:auto;top:190px}.travel-caption{top:150px}}
+
+/* ---------- director pass (02:00): give the 3D the screen ---------- */
+/* While the train rolls and Maja steps out, the ticket and the disabled depart button step aside;
+   the stop title becomes a lower-third card where the button was. */
+.mini-ticket{transition:opacity .35s, transform .35s}
+.departure-dock>*{transition:opacity .3s}
+body.traveling .mini-ticket{opacity:0;transform:translateY(-10px);pointer-events:none}
+body.traveling .departure-dock>*{opacity:0;pointer-events:none}
+.travel-caption{top:auto;bottom:calc(var(--test-space) + env(safe-area-inset-bottom) + 16px);padding:7px 18px 8px;background:#f8f0e3f0;box-shadow:0 4px 0 #24122b14,0 10px 24px #24122b26;animation:rise .4s both}
+.travel-caption b{font:600 20px var(--display);line-height:1.15}
+.travel-caption small{display:block;font:18px/1.1 var(--hand);color:var(--wine)}
+/* With a sheet open the ticket slims down (no brand row) so more of the scene shows above the sheet. */
+body.has-sheet .ticket-brand{display:none}
+body.has-sheet .mini-ticket{padding:9px 14px 8px}
+body.has-sheet .ticket-line{margin-top:0}
+body.has-sheet .ticket-line h1{font-size:22px}
+body.has-sheet .ticket-status{margin-top:6px;padding-top:6px}
+body.has-sheet .mini-ticket:after{top:34px}
+@media(min-width:700px){.travel-caption{bottom:auto;top:150px}}

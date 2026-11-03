@@ -805,9 +805,21 @@ const STOPS = [
       b.add(G.cyl(.25, .22, .4, 14), C.white, [.9, .37, -5.5]).add(G.cyl(.26, .26, .08, 14), C.gold, [.9, .58, -5.5]);
       b.add(G.box(.7, .5, .05), C.gold, [-.3, 2.0, -9.08]).add(G.box(.6, .4, .06), C.sage, [-.3, 2.0, -9.06]);
       b.add(G.cyl(.18, .14, .35, 10), C.falu, [3.2, .33, -8.6]); bAddBush(b, 3.2, -8.6, .55, '#5f8466');
+      // director touches: paint-swatch garland, the project plan on a sticky note, a fika break on a bucket
+      for (let i = 0; i <= 14; i++) { const t = i / 14, x = -1.45 + t * 4.9, y = 2.95 - Math.sin(t * Math.PI) * .32; b.add(G.box(.2, .26, .02), [C.rose, C.gold, C.sage, '#8fc3e0', C.wine, '#f6e6cf'][i % 6], [x, y - .13, -9.06], [0, 0, (i % 2 ? .08 : -.08)]); }
+      for (let i = 0; i < 14; i++) { const t = (i + .5) / 14, x = -1.45 + t * 4.9, y = 2.95 - Math.sin(t * Math.PI) * .32; b.add(G.box(.36, .015, .015), '#7a6670', [x, y + .01, -9.05], [0, 0, Math.cos(t * Math.PI) * .2]); }
+      c.sign(1.25, 1.0, (x, w, h) => {
+        x.fillStyle = '#fff3a6'; x.fillRect(0, 0, w, h); x.fillStyle = '#e8d77e'; x.fillRect(0, 0, w, h * .1);
+        x.fillStyle = C.wine; x.textAlign = 'left'; x.textBaseline = 'middle'; x.font = `700 ${h * .15}px Caveat, ${FONT}`; x.fillText('Projektplan', w * .1, h * .23);
+        x.fillStyle = '#3b2a35'; x.font = `600 ${h * .14}px Caveat, ${FONT}`;
+        ['1. Spackla ✓', '2. Filma ✓', '3. Fika'].forEach((l, i) => x.fillText(l, w * .12, h * (.45 + i * .18)));
+      }, { x: -.95, y: 1.3, z: -8.98, px: 256 });
+      b.add(G.cyl(.24, .2, .5, 14), '#e9e4da', [2.95, .41, -6.05]).add(G.cyl(.25, .25, .04, 14), C.sage, [2.95, .67, -6.05]);
+      b.add(G.cyl(.07, .07, .3, 10), C.wine, [2.85, .84, -6.1]).add(G.cyl(.05, .05, .05, 8), C.dark, [2.85, 1.01, -6.1]);
+      for (const [mx, col] of [[3.05, C.paper], [3.15, C.rose]]) b.add(G.cyl(.05, .045, .09, 10), col, [mx, .74, mx === 3.05 ? -5.92 : -6.12]);
       c.patch = c.mesh(m => { m.add(G.circ(.42, 18), '#f4efe6', [0, 0, 0], [Math.PI / 2, 0, 0]); m.add(G.sph(.12, 8, 6), '#f4efe6', [.1, -.03, .05], [0, 0, 0], [1.5, .3, 1]); });
       c.patch.position.set(-.1, cy - .11, -5.6); c.patch.scale.setScalar(0);
-      c.osynligt = c.sign(2.3, .62, drawBoard('Nästan osynligt!', { bg: C.paper, fg: C.wine, border: C.gold, size: .55 }), { x: .2, y: 2.55, z: -5.0, double: true });
+      c.osynligt = c.sign(2.3, .62, drawBoard('Nästan osynligt!', { bg: C.paper, fg: C.wine, border: C.gold, size: .55 }), { x: .5, y: 2.55, z: -5.0, double: true });
       c.osynligt.scale.setScalar(0);
     },
     idle(c, t) { if (c.osynligt.scale.x > .5) c.osynligt.rotation.z = Math.sin(t * 2) * .04; },
@@ -1084,6 +1096,7 @@ STOPS.push(
     },
     idle(c, t) { if (!c.busy) c.horse.rotation.y = Math.sin(t * .6) * .1; },
     reset(c) { c.hsign.visible = false; c.hsign.position.y = 9; },
+    settle(c) { c.hsign.visible = true; c.hsign.position.y = 0; },
     async react(c) {
       if (c.busy) return; c.busy = true;
       await anim(.5, p => { c.horse.position.z = -8.9 + p * .9; c.horse.position.y = .6 + Math.sin(p * Math.PI) * .2; }, ease.back);
@@ -1258,6 +1271,7 @@ STOPS.push(
       await wait(1.2);
     },
     reset(c) { c.puck.position.set(3.5, .95, -5.6); c.scoreVal = '64'; c.score.userData.ct.redraw(); },
+    settle(c) { if (c.scoreVal !== '88') { c.scoreVal = '88'; c.score.userData.ct.redraw(); } },
   },
   // ------------------------------------------------------------------ 10 Maria
   { id: 'maria', kind: 'main', t: '13:00', name: 'Maria',
@@ -1330,6 +1344,7 @@ STOPS.push(
       c.pick(hs, 'hester');
     },
     reset(c) { c.roof.visible = false; c.roof.position.y = 12; },
+    settle(c) { c.roof.visible = true; c.roof.position.y = 2.9; },
     async react(c) { if (c.flip) return; c.flip = true; await anim(.5, p => { c.hboard.rotation.y = p * Math.PI; }, ease.back); await wait(1.6); await anim(.5, p => { c.hboard.rotation.y = Math.PI * (1 - p); }, ease.inOut); c.flip = false; },
     async event(c) {
       for (let i = 0; i < 4; i++) { c.fx.dust(c.L(i % 2 ? 3.1 : .7, .9, i % 2 ? -6.9 : -7.2), 4, '#e8cf9a'); c.bubble(i % 2 ? 'dunk!' : 'pang!', [i % 2 ? 3.1 : .7, 2.0, i % 2 ? -6.6 : -6.9], { h: .4, dur: .9 }); await wait(.38); }
@@ -1659,7 +1674,7 @@ STOPS.push(
     },
   },
   // ------------------------------------------------------------------ 18 Cin cin – finale
-  { id: 'cincin', kind: 'main', t: '17:00', name: 'Cin cin 🥂',
+  { id: 'cincin', kind: 'main', t: '17:00', name: 'Cin cin 🥂', sign: [-1.5, -3.95],
     stand: [0.8, -2.7], 
     mattias: { p: [1.95, .2, -6.25], pose: 'stand', face: [.15, -6.0] },
     spots: { table: [.25, -5.95, .2] },
@@ -2057,6 +2072,8 @@ export async function createWorld({ scene, renderer, camera } = {}) {
     c.targetSat = stateSat[state] ?? 1;
     if ((state === 'locked' || state === 'ready') && prev === 'visited') c.def.reset?.(c);
     if (state === 'locked' && prev !== 'locked') c.def.reset?.(c);
+    // restored as visited (reload / Resplan) without having played the showpiece: show its end state
+    if (state === 'visited' && prev !== 'visited' && !running.has(i)) c.def.settle?.(c);
   }
   function setSign(i, text) { const c = ctxs[i]; if (!c) return; c.board.userData.ct.setDraw(drawDeparture(c.def.t, String(text ?? ''))); }
   const running = new Map();
@@ -2126,7 +2143,7 @@ export async function createWorld({ scene, renderer, camera } = {}) {
       const mu = c.mat.userData.uSat; if (c.targetSat !== undefined) mu.value = lerp(mu.value, c.targetSat, Math.min(1, dt * 3));
       const d2 = c.root.position.distanceToSquared(cp); c.root.visible = d2 < 135 * 135; const near = d2 < 95 * 95; if (!near) return;
       const st = c.state;
-      c.armT = lerp(c.armT, st === 'locked' ? 0 : 1, Math.min(1, dt * 3)); c.arm.rotation.z = -c.armT * Math.PI / 2; // open = raised upright (never lies across the platform)
+      c.armT = lerp(c.armT, st === 'locked' ? 0 : 1, Math.min(1, dt * 3)); c.arm.rotation.z = -c.armT * Math.PI / 2; c.arm.scale.x = 1 - c.armT * .7; // open = raised upright and folded short (stays out of the close-ups)
       const ready = st === 'ready'; c.beacon.visible = ready; c.readyBalloons.visible = ready;
       if (ready) {
         c.beacon.rotation.y += dt * 2; c.beacon.position.y = c.beaconY + Math.sin(t * 2.5) * .08; c.beacon.scale.setScalar(1 + Math.sin(t * 5) * .08);
