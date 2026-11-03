@@ -2014,6 +2014,7 @@ export async function createWorld({ scene, renderer, camera } = {}) {
     for (const [px_, pz_, ps] of [[def.stand[0] + 2.9, 2.6, .32], [def.stand[0] + 3.4, 2.9, .22], [def.stand[0] - 1.0, 3.2, .26]]) { c.b.add(G.sph(ps, 12, 8), C.orange, [px_, ps * .8, pz_], [0, 0, 0], [1.15, .85, 1.15]); c.b.add(G.cyl(.03, .04, .14, 5), '#5d6b3a', [px_, ps * 1.55, pz_]); }
     def.build(c);
     root.add(c.b.mesh(mat)); if (!c.g.empty) root.add(c.g.mesh(glowMat, { cast: false, receive: false }));
+    for (const builder of [c.b, c.g]) { for (const part of builder.parts) part.dispose(); builder.parts.length = 0; }
     root.traverse(o => { if (o.isMesh && o.material === mat) { o.castShadow = true; o.receiveShadow = true; } });
     c.state = 'locked'; mat.userData.uSat.value = stateSat.locked; c.armT = 0;
   });
@@ -2126,6 +2127,7 @@ export async function createWorld({ scene, renderer, camera } = {}) {
 
   // ---------------- per-frame
   const camDir = V3(), focus = V3(), lightDir = V3(), sunYaw = { v: null };
+  const birdM = new THREE.Matrix4(), birdQ = new THREE.Quaternion(), birdE = new THREE.Euler(), birdS = V3(), birdP = V3();
   let steamAcc = 0, chug = 0;
   function update(dt = 0, elapsed = 0) {
     dt = Math.min(dt, .1);
@@ -2158,7 +2160,7 @@ export async function createWorld({ scene, renderer, camera } = {}) {
     void cameoC;
     // clouds + birds
     clouds.rotation.y = t * .004;
-    { const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = V3(), p = V3();
+    { const m4 = birdM, q = birdQ, e = birdE, s = birdS, p = birdP;
       birdsData.forEach((b, i) => { const a = t * .05 * b.sp + i * .07, R0 = 70 + b.r; p.set(Math.cos(a) * R0, 32 + b.y + Math.sin(t + i) * .5, Math.sin(a) * R0); e.set(0, -a, 0); q.setFromEuler(e); s.set(1.2, Math.sin(t * 9 + b.ph) * 1.2, 1.2); m4.compose(p, q, s); flock.setMatrixAt(i, m4); });
       flock.instanceMatrix.needsUpdate = true; flock.visible = todF < .95; }
     // light follows the view so every stop is pleasantly front-lit; shadow box follows the focus point
@@ -2168,7 +2170,7 @@ export async function createWorld({ scene, renderer, camera } = {}) {
     if (sunYaw.v === null) sunYaw.v = yawTarget; let dy = yawTarget - sunYaw.v; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); sunYaw.v += dy * Math.min(1, dt * 1.5 + (dt === 0 ? 1 : 0));
     const el = THREE.MathUtils.degToRad(lerp(38, 22, smooth(todF, .55, .92)) + (todF > .93 ? (todF - .93) * 200 : 0));
     lightDir.set(Math.sin(sunYaw.v) * Math.cos(el), Math.sin(el), Math.cos(sunYaw.v) * Math.cos(el));
-    const texel = 40 / 2048; focus.x = Math.round(focus.x / texel) * texel; focus.z = Math.round(focus.z / texel) * texel;
+    const texel = 40 / sun.shadow.mapSize.x; focus.x = Math.round(focus.x / texel) * texel; focus.z = Math.round(focus.z / texel) * texel;
     sun.position.copy(focus).addScaledVector(lightDir, 70); sun.target.position.copy(focus); sun.target.updateMatrixWorld();
     // sky sun glow: low over the horizon, on the side of the light but a bit off-view
     sky.material.uniforms.uSun.value.set(-lightDir.x, Math.max(.02, Math.sin(THREE.MathUtils.degToRad(tod.el))), -lightDir.z).normalize();

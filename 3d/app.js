@@ -124,6 +124,44 @@ function updateFraming(dt) {
 
 /* ------------------------------------------------------------------ frame loop */
 const live = new Set();  // characters to update
+const quality = {
+  level: 0, cap: 2, start: 0, frames: 0, slowWindows: 0,
+  warmUntil: performance.now() + 8000
+};
+function applyQuality(level) {
+  quality.level = level;
+  quality.cap = [2, 1.5, 1.25, 1.25][level];
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.cap));
+  renderer.setSize(innerWidth, innerHeight);
+  const sun = scene.children.find(o => o.isDirectionalLight && o.castShadow);
+  if (level >= 1 && sun && sun.shadow.mapSize.x !== 1024) {
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.map?.dispose();
+    sun.shadow.map = null;
+    sun.shadow.needsUpdate = true;
+  }
+  renderer.shadowMap.enabled = level < 3;
+  for (const c of live) if (c.shadow) c.shadow.visible = level === 3 || !!c.blobOnly;
+}
+function updateQuality(timestamp) {
+  if (document.hidden || timestamp < quality.warmUntil) {
+    quality.start = 0; quality.frames = 0; quality.slowWindows = 0;
+    return;
+  }
+  if (!quality.start) { quality.start = timestamp; quality.frames = 0; return; }
+  quality.frames++;
+  const span = timestamp - quality.start;
+  if (span < 2000) return;
+  const fps = quality.frames * 1000 / span;
+  quality.slowWindows = fps < 45 ? quality.slowWindows + 1 : 0;
+  quality.start = timestamp; quality.frames = 0;
+  if (quality.slowWindows >= 2 && quality.level < 3) {
+    applyQuality(quality.level + 1);
+    quality.slowWindows = 0;
+    quality.warmUntil = timestamp + 2000;
+  }
+}
+
 function frame(dt) {
   elapsed += dt;
   for (const tween of tweens) { tween.elapsed += dt; const p = Math.min(1, tween.elapsed / tween.duration); tween.step(p); if (p === 1) { tweens.delete(tween); tween.resolve(); } }
@@ -141,7 +179,7 @@ function frame(dt) {
 function loop(timestamp) {
   if (failed) return;
   const dt = lastTimestamp === null ? 0 : Math.min((timestamp - lastTimestamp) / 1000, .05); lastTimestamp = timestamp;
-  try { frame(dt); } catch (error) { fallback(error); return; }
+  try { frame(dt); updateQuality(timestamp); } catch (error) { fallback(error); return; }
   frameId = requestAnimationFrame(loop);
 }
 function randomIdle() {
@@ -212,7 +250,7 @@ function showSheet(i) {
 
 /* ------------------------------------------------------------------ characters */
 function prepCharacter(c) {
-  if (c.shadow) c.shadow.visible = false;           // the world has a real shadow map – no double shadows
+  if (c.shadow) c.shadow.visible = !renderer.shadowMap.enabled;           // blob shadows only when real shadows are off
   live.add(c);
   return c;
 }
@@ -298,7 +336,12 @@ function stage(i) {
   place(m, ms.pos, ms.facing); m.setProp('right', null, true); m.setExpression(s.id === 'cincin' ? 'happy' : 'sneaky');
   void m.play(...mattiasPose(i));
   staged.push({ who: 'mattias', character: m });
-  for (const n of staged) n.character.update(0);
+  for (const n of staged) {
+    const c = n.character; c.blobOnly = true;
+    c.group.traverse(o => { if (o.isMesh) o.castShadow = false; });
+    if (c.shadow) c.shadow.visible = true;
+    c.update(0);
+  }
 }
 function parkConductor(i) {
   const cond = npc('conductor'); if (!cond) return;
@@ -703,14 +746,14 @@ function setupInteractions() {
     }
   });
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); fallback(new Error('WebGL context lost')); });
-  document.addEventListener('visibilitychange', () => { lastTimestamp = null; if (!document.hidden) tick(); });
+  document.addEventListener('visibilitychange', () => { quality.start = 0; quality.frames = 0; quality.slowWindows = 0; quality.warmUntil = performance.now() + 2000; lastTimestamp = null; if (!document.hidden) tick(); });
 }
 
 /* ------------------------------------------------------------------ boot */
 async function boot() {
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.setSize(innerWidth, innerHeight); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.cap)); renderer.setSize(innerWidth, innerHeight); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(FOV, innerWidth / innerHeight, .1, 500); camera.position.set(7, 6, 12);
     await document.fonts.ready;
@@ -724,7 +767,7 @@ async function boot() {
     stage(initial); parkConductor(initial);
     maja.group.position.copy(world.stations[initial].standPos); maja.group.rotation.y = world.stations[initial].standFacing;
     shot(initial, { snap: true }); camera.position.copy(cam.goalPos); cam.target.copy(cam.goalTarget); camera.lookAt(cam.target);
-    const resize = () => { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); bandAt = -1; }; window.addEventListener('resize', resize); window.visualViewport?.addEventListener('resize', resize);
+    const resize = () => { renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.cap)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); bandAt = -1; }; window.addEventListener('resize', resize); window.visualViewport?.addEventListener('resize', resize);
     setupInteractions(); setPhase('waiting'); initContent(tick); tick();
     if (restored >= 0) { applyFinal(restored); showSheet(restored); shot(restored, { sheet: true, snap: true }); }
     else { maja.setExpression('sleepy'); maja.setProp('right', 'coffee', true); if (now() < unlockAt(8)) { requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => announce(PRE_DEPARTURE), 600))); if (!reduced) void majaOneShot('yawn'); } }
