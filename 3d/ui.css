@@ -387,3 +387,18 @@ body.testing .toast{bottom:calc(var(--test-space) + var(--dock-height) + env(saf
 .story-sheet{height:min(55dvh,620px)}.announcement .conductor-icon{font-size:22px}.ticket-status #status-label{line-height:1.35}.sheet-toggle #sheet-label{font-size:14px}.scene-caption p{font-size:23px}
 .announcement{top:max(12px,env(safe-area-inset-top));left:16px;right:86px;margin:0;max-width:calc(100% - 102px);padding:12px 14px;border-radius:16px;min-height:108px;align-items:flex-start}.announcement:before{display:none}.announcement .conductor-icon{display:none}.announcement p{font-size:16px}.announcing .mini-ticket{opacity:0;pointer-events:none}@media(min-width:700px){.announcement{left:calc(50% - 335px);width:460px;max-width:460px;right:auto}}
 .sheet-toggle{touch-action:none}
+/* ---- integration pass: give the 3D scene a fixed, generous band above the sheet (same top in test + normal mode) */
+:root{--sheet-top:46dvh}
+.story-sheet{height:max(220px,calc(100dvh - var(--sheet-top) - var(--test-space) - var(--dock-height) - env(safe-area-inset-bottom) - 8px));max-height:none}
+.story-sheet.collapsed{height:72px}
+/* scene caption: a small paper chip just above the dock / peek bar, never on top of the showpiece */
+.scene-caption{top:auto;bottom:calc(var(--test-space) + var(--dock-height) + env(safe-area-inset-bottom) + 10px);left:50%;right:auto;transform:translateX(-50%);width:max-content;max-width:calc(100% - 40px);background:#f8f0e3e6;border-radius:16px;padding:8px 16px 9px;box-shadow:0 6px 18px #24122b1f;text-shadow:none}
+.scene-caption h2{font-size:21px;margin:3px 0 2px}.scene-caption p{font-size:18px;margin:2px 0 0}
+body.has-sheet .scene-caption{opacity:0}
+body.has-sheet:has(.story-sheet.collapsed) .scene-caption{opacity:1;bottom:calc(var(--test-space) + var(--dock-height) + env(safe-area-inset-bottom) + 90px)}
+body.has-sheet:has(.story-sheet.collapsed) .scene-caption p{display:none}
+body.traveling .scene-caption{opacity:0}
+/* travel caption: compact pill under the ticket / conductor */
+.travel-caption{top:calc(max(12px,env(safe-area-inset-top)) + 124px);left:50%;right:auto;transform:translateX(-50%);width:max-content;max-width:calc(100% - 40px);background:#f8f0e3e0;border-radius:16px;padding:6px 16px 7px;box-shadow:0 6px 18px #24122b1f;text-shadow:none}
+.travel-caption>span{display:none}.travel-caption b{font:600 19px var(--display)}.travel-caption small{font:17px var(--hand)}
+@media(min-width:700px){.scene-caption{left:6vw;transform:none;bottom:auto;top:190px}.travel-caption{top:150px}}

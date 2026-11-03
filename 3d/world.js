@@ -773,7 +773,7 @@ const STOPS = [
   { id: 'spackel', kind: 'mini', t: '08:30', name: 'Spackel',
     stand: [0.6, -2.5], camFix: { p: [2.4, 1.05, 9.4], t: [.9, 2.75, -6] },
     mattias: { p: [1.75, 2.12, -6.9], pose: 'stand' },
-    spots: { film: [.2, -5.2, .16] },
+    spots: { film: [1.0, -4.75, .16] },
     build(c) {
       const { b, g } = c, wall = '#f3dfc4', wall2 = '#f6e6cf';
       b.add(G.box(5.4, .16, 4.4), '#c99b6b', [1, .08, -7]);
@@ -889,7 +889,8 @@ const STOPS = [
     stand: [0.6, -2.5], 
     mattias: { p: [2.25, .15, -9.15], pose: 'peek' },
     npcs: [{ who: 'friend1', p: [.6, .15, -7.0], face: [-.9, -6.4] }, { who: 'friend2', p: [1.6, .15, -7.5], face: [-.9, -6.4] }, { who: 'friend3', p: [2.6, .15, -6.6], face: [-.9, -6.4] }],
-    spots: { sofa: [1.2, -8.1, .15] },
+    // sofa = Maja (front edge, middle-left); sofaL/sofaR = the outer cushions for two friends. Seat top y = .81.
+    spots: { sofa: [1.45, -8.13, .15], sofaL: [.7, -8.5, .15], sofaR: [2.23, -7.76, .15] },
     build(c) {
       const { b, g } = c;
       b.add(G.box(6.4, .15, 5.2), '#b98a5e', [1, .075, -7.2]);
@@ -1588,7 +1589,7 @@ STOPS.push(
       // truss for the disco ball
       b.add(G.box(.08, 1.4, .08), '#9a9aa4', [lx, 4.0, lz + 2.2]);
       const ball = c.mesh(m => {
-        const geo = new THREE.IcosahedronGeometry(.7, 2).toNonIndexed(), pos = geo.attributes.position, n = pos.count, col = [];
+        const geo = new THREE.IcosahedronGeometry(.7, 2) /* already non-indexed */, pos = geo.attributes.position, n = pos.count, col = [];
         for (let i = 0; i < n; i += 3) { const v = .6 + R() * .4; for (let k = 0; k < 3; k++) col.push(v, v, v * 1.02); }
         geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
         m.parts.push((() => { const gg = geo; gg.deleteAttribute('uv'); const idx = []; for (let i = 0; i < n; i++) idx.push(i); gg.setIndex(idx); return gg; })());
@@ -2125,7 +2126,7 @@ export async function createWorld({ scene, renderer, camera } = {}) {
       const mu = c.mat.userData.uSat; if (c.targetSat !== undefined) mu.value = lerp(mu.value, c.targetSat, Math.min(1, dt * 3));
       const d2 = c.root.position.distanceToSquared(cp); c.root.visible = d2 < 135 * 135; const near = d2 < 95 * 95; if (!near) return;
       const st = c.state;
-      c.armT = lerp(c.armT, st === 'locked' ? 0 : 1, Math.min(1, dt * 3)); c.arm.rotation.z = -Math.sin(c.armT * Math.PI) * .9; c.arm.rotation.y = c.armT * Math.PI;
+      c.armT = lerp(c.armT, st === 'locked' ? 0 : 1, Math.min(1, dt * 3)); c.arm.rotation.z = -c.armT * Math.PI / 2; // open = raised upright (never lies across the platform)
       const ready = st === 'ready'; c.beacon.visible = ready; c.readyBalloons.visible = ready;
       if (ready) {
         c.beacon.rotation.y += dt * 2; c.beacon.position.y = c.beaconY + Math.sin(t * 2.5) * .08; c.beacon.scale.setScalar(1 + Math.sin(t * 5) * .08);
